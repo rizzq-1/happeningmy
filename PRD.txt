@@ -1,0 +1,47 @@
+============================================================
+PRODUCT REQUIREMENTS DOCUMENT (PRD): HappeningMY (Google Stack)
+============================================================
+Project Name: HappeningMY - Google AI & Cloud Integration
+Target Market: Malaysia
+Framework: Next.js + Google Cloud Ecosystem
+Date: February 17, 2026
+
+1. GOOGLE TECHNOLOGY INTEGRATION
+------------------------------------------------------------
+- AI/ML: Gemini 1.5 Flash (Google AI Studio) 
+  - Multimodal parsing of event posters into JSON data.
+  - Automated content moderation and spam detection.
+- AI/ML: Vertex AI 
+  - Vector embeddings for "Vibe-Based" event recommendations.
+- Maps: Google Maps Platform 
+  - Advanced Markers for geospatial event discovery.
+  - Places API for venue address validation.
+- Backend: Firebase (Auth, Firestore, Cloud Storage)
+  - Real-time event updates and secure image hosting.
+- Hosting: Google Cloud Run
+  - Serverless execution of Next.js backend logic.
+
+2. CORE FEATURES (GOOGLE-POWERED)
+------------------------------------------------------------
+- "Snapshot-to-Event": User uploads a flyer; Gemini extracts 
+  details and populates the database automatically.
+- Semantic Discovery: Natural language search (e.g., "music gigs 
+  near me with no cover charge") via Vertex AI.
+- Live Heatmaps: Google Maps visualization showing real-time 
+  community engagement in specific districts.
+- Social Impact Dashboard: BigQuery analytics tracking 
+  contribution toward SDG 4, 8, and 11.
+
+3. DATA FLOW
+------------------------------------------------------------
+1. Poster Upload -> Firebase Storage.
+2. Trigger Cloud Function -> Gemini 1.5 Flash (Extraction).
+3. Save Structured Data -> Firestore.
+4. Render on Map -> Google Maps JavaScript API.
+
+4. SUCCESS METRICS
+------------------------------------------------------------
+- AI Extraction Accuracy: >95% (Measured via Gemini 1.5 Flash).
+- Map Latency: <2s for loading 100+ local markers.
+- User Onboarding: <30s using Google One-Tap (Firebase Auth).
+============================================================
