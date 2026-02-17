@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// Allow up to 60s for large poster processing
+export const maxDuration = 60;
+
 const EXTRACTION_PROMPT = `You are an expert event data extractor for Malaysian events. Analyze this event poster/flyer image and extract structured information.
 
 Return ONLY a valid JSON object with these fields:
@@ -60,11 +63,42 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const formData = await request.formData();
-    const posterFile = formData.get("poster") as File;
+    // Parse the multipart form data
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (formError) {
+      console.error("FormData parse error:", formError);
+      return NextResponse.json(
+        { error: "Failed to parse upload. Please try a smaller image or different format." },
+        { status: 400 }
+      );
+    }
 
-    if (!posterFile) {
-      return NextResponse.json({ error: "No poster file provided" }, { status: 400 });
+    const posterFile = formData.get("poster") as File | null;
+
+    if (!posterFile || posterFile.size === 0) {
+      return NextResponse.json(
+        { error: "No poster file provided. Please select an image to upload." },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"];
+    if (!allowedTypes.includes(posterFile.type)) {
+      return NextResponse.json(
+        { error: `Unsupported file type: ${posterFile.type}. Please upload a JPG, PNG, or WebP image.` },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 10MB)
+    if (posterFile.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "File too large. Maximum size is 10 MB." },
+        { status: 400 }
+      );
     }
 
     // Convert file to base64
@@ -72,9 +106,11 @@ export async function POST(request: NextRequest) {
     const base64 = Buffer.from(bytes).toString("base64");
     const mimeType = posterFile.type || "image/jpeg";
 
+    console.log(`[extract] Processing poster: ${posterFile.name}, ${posterFile.type}, ${(posterFile.size / 1024).toFixed(1)}KB`);
+
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // Send image to Gemini for multimodal parsing
     const result = await model.generateContent([
@@ -90,22 +126,49 @@ export async function POST(request: NextRequest) {
     const response = result.response;
     const text = response.text();
 
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Parse JSON from response (handle markdown code blocks too)
+    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+      console.error("[extract] No JSON found in Gemini response:", text.substring(0, 500));
       return NextResponse.json(
-        { error: "Failed to parse extraction results" },
-        { status: 500 }
+        { error: "AI could not parse this image. Try a clearer poster with visible text." },
+        { status: 422 }
       );
     }
 
     const extraction = JSON.parse(jsonMatch[0]);
 
+    console.log(`[extract] Success: "${extraction.title}" (confidence: ${extraction.confidence})`);
+
     return NextResponse.json({ extraction });
   } catch (error) {
     console.error("Extraction error:", error);
+
+    // Provide user-friendly error messages
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.includes("API_KEY_INVALID") || message.includes("API key")) {
+      return NextResponse.json(
+        { error: "Invalid Gemini API key. Please check your GOOGLE_AI_API_KEY in .env.local." },
+        { status: 401 }
+      );
+    }
+    if (message.includes("SAFETY")) {
+      return NextResponse.json(
+        { error: "The image was blocked by safety filters. Please try a different poster." },
+        { status: 400 }
+      );
+    }
+    if (message.includes("quota") || message.includes("429")) {
+      return NextResponse.json(
+        { error: "API rate limit reached. Please wait a moment and try again." },
+        { status: 429 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to extract event details" },
+      { error: "Failed to extract event details. Please try again." },
       { status: 500 }
     );
   }

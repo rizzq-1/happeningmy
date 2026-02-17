@@ -7,11 +7,13 @@ import { GeminiExtractionResult } from "@/lib/types";
 
 export default function UploadPage() {
   const [extracted, setExtracted] = useState<GeminiExtractionResult | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
-  const handleExtracted = (result: GeminiExtractionResult) => {
+  const handleExtracted = (result: GeminiExtractionResult, imgUrl: string) => {
     setExtracted(result);
+    setImageUrl(imgUrl);
     setPublished(false);
   };
 
@@ -25,6 +27,7 @@ export default function UploadPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...extracted,
+          imageUrl: imageUrl || "",
           lat: 3.139 + (Math.random() - 0.5) * 0.05,
           lng: 101.6869 + (Math.random() - 0.5) * 0.05,
           attendeeCount: 0,
