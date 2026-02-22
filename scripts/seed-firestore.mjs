@@ -1,19 +1,21 @@
 // Seed Firestore with events from SEED_EVENTS
-// Run with: node scripts/seed-firestore.mjs
+// Run with: node --env-file=.env.local scripts/seed-firestore.mjs
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 
-const app = initializeApp({
-  apiKey: "AIzaSyC8VLfBlP4QBZbLsmCKAzgFpGRGXJhy8sU",
-  authDomain: "kitahack2026-a142d.firebaseapp.com",
-  projectId: "kitahack2026-a142d",
-  storageBucket: "kitahack2026-a142d.firebasestorage.app",
-  messagingSenderId: "69069335519",
-  appId: "1:69069335519:web:46990aee7135ea9daf326a",
-});
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+};
 
-const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, "happeningdb");
 
 const SEED_EVENTS = [
   {
