@@ -10,10 +10,14 @@ import { format, parseISO } from "date-fns";
 interface EventCardProps {
   event: HappeningEvent;
   compact?: boolean;
+  externalUrl?: string;
 }
 
-export default function EventCard({ event, compact = false }: EventCardProps) {
+export default function EventCard({ event, compact = false, externalUrl }: EventCardProps) {
   const { isSaved, toggleSave } = useSavedEvents();
+  const href = externalUrl || `/events/${event.id}`;
+  const linkTarget = externalUrl ? "_blank" : undefined;
+  const linkRel = externalUrl ? "noopener noreferrer" : undefined;
   const cat = CATEGORY_CONFIG[event.category] || {
     label: event.category,
     emoji: "📌",
@@ -31,7 +35,9 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
   if (compact) {
     return (
       <Link
-        href={`/events/${event.id}`}
+        href={href}
+        target={linkTarget}
+        rel={linkRel}
         className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
       >
         {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
@@ -67,7 +73,9 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
 
   return (
     <Link
-      href={`/events/${event.id}`}
+      href={href}
+      target={linkTarget}
+      rel={linkRel}
       className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg hover:shadow-gray-200/50 hover:border-gray-200 transition-all duration-300"
     >
       {/* Image */}

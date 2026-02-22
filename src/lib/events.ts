@@ -8,7 +8,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   limit,
   Timestamp,
 } from "firebase/firestore";
@@ -20,10 +19,16 @@ import { SEED_EVENTS } from "./constants";
 const EVENTS_COLLECTION = "events";
 
 // ── Get all events (with optional filters) ──────────────────
-export async function getEvents(filters?: SearchFilters): Promise<HappeningEvent[]> {
+export async function getEvents(filters?: SearchFilters & { status?: string; includePast?: boolean }): Promise<HappeningEvent[]> {
   try {
     const eventsRef = collection(db, EVENTS_COLLECTION);
     const constraints: Parameters<typeof query>[1][] = [];
+
+    // Only show published events by default
+    const statusFilter = filters?.status || "published";
+    if (statusFilter !== "all") {
+      constraints.push(where("status", "==", statusFilter));
+    }
 
     if (filters?.category) {
       constraints.push(where("category", "==", filters.category));
@@ -35,22 +40,34 @@ export async function getEvents(filters?: SearchFilters): Promise<HappeningEvent
       constraints.push(where("isFree", "==", filters.isFree));
     }
 
-    constraints.push(orderBy("date", "asc"));
     constraints.push(limit(100));
 
     const q = query(eventsRef, ...constraints);
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      return SEED_EVENTS;
+      // Firestore connected but no matching events — return empty, not seed data
+      console.warn("[getEvents] Firestore returned 0 events for status:", statusFilter);
+      return [];
     }
 
-    return snapshot.docs.map((doc) => ({
+    // Sort by date in JS to avoid requiring a Firestore composite index
+    let events = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as HappeningEvent[];
-  } catch {
-    // Fallback to seed data when Firebase is not configured
+
+    // Filter out past events unless explicitly requested
+    if (!filters?.includePast) {
+      const today = new Date().toISOString().slice(0, 10);
+      events = events.filter((e) => (e.endDate || e.date) >= today);
+    }
+
+    return events.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  } catch (error) {
+    // Log the real error so it's not silently swallowed
+    console.error("[getEvents] Firestore query failed:", error);
+    // Fallback to seed data only when Firebase is not configured / unreachable
     return filterSeedEvents(filters);
   }
 }

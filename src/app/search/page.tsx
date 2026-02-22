@@ -31,26 +31,30 @@ function SearchContent() {
   const initialCategory = searchParams.get("category") || "";
   const initialCity = searchParams.get("city") || "";
 
-  // Load events from Firestore on mount
+  // Load events from Firestore on mount, then apply initial filters
   useEffect(() => {
     getEvents()
       .then((firestoreEvents) => {
-        setAllEvents(firestoreEvents);
-        setEvents(firestoreEvents);
+        if (firestoreEvents.length > 0) {
+          setAllEvents(firestoreEvents);
+          // Apply initial category/city filters if present
+          if (initialCategory || initialCity) {
+            let results = [...firestoreEvents];
+            if (initialCategory) {
+              results = results.filter((e) => e.category === initialCategory);
+            }
+            if (initialCity) {
+              results = results.filter((e) => e.city === initialCity);
+            }
+            setEvents(results);
+          } else {
+            setEvents(firestoreEvents);
+          }
+        }
       })
-      .catch(() => {
-        setAllEvents(SEED_EVENTS);
-        setEvents(SEED_EVENTS);
+      .catch((err) => {
+        console.error("[SearchPage] Failed to fetch events:", err);
       });
-  }, []);
-
-  useEffect(() => {
-    if (initialCategory || initialCity) {
-      handleSearch({
-        category: initialCategory as EventCategory || undefined,
-        city: initialCity || undefined,
-      });
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -231,6 +235,8 @@ function SearchContent() {
       <SearchBar
         onSearch={handleSearch}
         initialQuery={searchParams.get("q") || ""}
+        initialCategory={initialCategory}
+        initialCity={initialCity}
       />
 
       {/* View Toggle & Results Count */}
@@ -283,7 +289,7 @@ function SearchContent() {
                     <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-blue-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow">
                       <Globe size={10} /> Web
                     </div>
-                    <EventCard event={event} />
+                    <EventCard event={event} externalUrl={event.website || undefined} />
                     {event.website && (
                       <a
                         href={event.website}

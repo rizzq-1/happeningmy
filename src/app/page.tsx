@@ -11,6 +11,7 @@ import {
   BarChart3,
   Flame,
   Zap,
+  Calendar,
 } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import EventMap from "@/components/EventMap";
@@ -24,7 +25,14 @@ export default function HomePage() {
   const [showHeatmap, setShowHeatmap] = useState(false);
 
   useEffect(() => {
-    getEvents().then(setEvents).catch(() => setEvents(SEED_EVENTS));
+    getEvents()
+      .then((fetched) => {
+        // Only replace seed data if Firestore returned real events
+        if (fetched.length > 0) setEvents(fetched);
+      })
+      .catch((err) => {
+        console.error("[HomePage] Failed to fetch events:", err);
+      });
   }, []);
 
   const handleMarkerClick = useCallback((event: HappeningEvent) => {
@@ -40,7 +48,9 @@ export default function HomePage() {
           <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-300 rounded-full blur-3xl" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-28 relative">
-          <div className="max-w-3xl">
+          <div className="flex items-center gap-12">
+            {/* Left: text content */}
+            <div className="max-w-3xl flex-1">
             <div className="flex items-center gap-2 mb-6">
               <span className="px-3 py-1 bg-white/15 backdrop-blur-sm rounded-full text-xs font-semibold flex items-center gap-1.5">
                 <Sparkles size={12} /> Powered by Google AI
@@ -76,6 +86,65 @@ export default function HomePage() {
               >
                 <Search size={18} />
                 Explore Events
+              </Link>
+            </div>
+            </div>
+
+            {/* Right: event preview cards (hidden on mobile) */}
+            <div className="hidden lg:flex flex-col gap-3 w-80 shrink-0">
+              <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-1">
+                Upcoming Events
+              </p>
+              <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/20">
+                {events.slice(0, 5).map((event) => {
+                  const cat = CATEGORY_CONFIG[event.category] || { label: event.category, emoji: "📌", color: "#6B7280" };
+                  return (
+                    <Link
+                      key={event.id}
+                      href={`/events/${event.id}`}
+                      className="flex items-start gap-3 p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 hover:bg-white/20 transition-all group"
+                    >
+                      {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+                        <img
+                          src={event.imageUrl}
+                          alt={event.title}
+                          className="w-12 h-12 rounded-lg object-cover shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center text-xl shrink-0"
+                          style={{ backgroundColor: cat.color + "30" }}
+                        >
+                          {cat.emoji}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-semibold text-white truncate group-hover:text-yellow-200 transition-colors">
+                          {event.title}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-1 text-[11px] text-blue-200">
+                          <Calendar size={10} />
+                          <span>{event.date} · {event.time}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-blue-200">
+                          <MapPin size={10} />
+                          <span className="truncate">{event.venue}, {event.city}</span>
+                        </div>
+                      </div>
+                      {event.isFree && (
+                        <span className="text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-md shrink-0 mt-0.5">
+                          FREE
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+              <Link
+                href="/search"
+                className="flex items-center justify-center gap-1.5 text-xs font-medium text-white/70 hover:text-white transition-colors mt-1"
+              >
+                View all events <ArrowRight size={12} />
               </Link>
             </div>
           </div>

@@ -8,14 +8,16 @@ import { EventCategory, SearchFilters } from "@/lib/types";
 interface SearchBarProps {
   onSearch: (filters: SearchFilters) => void;
   initialQuery?: string;
+  initialCategory?: string;
+  initialCity?: string;
   showFilters?: boolean;
 }
 
-export default function SearchBar({ onSearch, initialQuery = "", showFilters = true }: SearchBarProps) {
+export default function SearchBar({ onSearch, initialQuery = "", initialCategory = "", initialCity = "", showFilters = true }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [category, setCategory] = useState<EventCategory | "">("");
-  const [city, setCity] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(!!(initialCategory || initialCity));
+  const [category, setCategory] = useState<EventCategory | "">(initialCategory as EventCategory | "");
+  const [city, setCity] = useState(initialCity);
   const [isFree, setIsFree] = useState<boolean | undefined>();
 
   const handleSearch = () => {
@@ -105,7 +107,11 @@ export default function SearchBar({ onSearch, initialQuery = "", showFilters = t
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as EventCategory | "")}
+                onChange={(e) => {
+                  const val = e.target.value as EventCategory | "";
+                  setCategory(val);
+                  onSearch({ query: query || undefined, category: val || undefined, city: city || undefined, isFree });
+                }}
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">All Categories</option>
@@ -124,7 +130,11 @@ export default function SearchBar({ onSearch, initialQuery = "", showFilters = t
               </label>
               <select
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCity(val);
+                  onSearch({ query: query || undefined, category: category || undefined, city: val || undefined, isFree });
+                }}
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">All Cities</option>
@@ -149,7 +159,10 @@ export default function SearchBar({ onSearch, initialQuery = "", showFilters = t
                 ].map((opt) => (
                   <button
                     key={String(opt.value)}
-                    onClick={() => setIsFree(opt.value)}
+                    onClick={() => {
+                      setIsFree(opt.value);
+                      onSearch({ query: query || undefined, category: category || undefined, city: city || undefined, isFree: opt.value });
+                    }}
                     className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                       isFree === opt.value
                         ? "bg-blue-600 text-white shadow-sm"

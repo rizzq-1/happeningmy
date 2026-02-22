@@ -1,5 +1,15 @@
 import { HappeningEvent, SDGMetric, DashboardStats, HeatmapDataPoint } from "./types";
 
+// ── Admin Emails ────────────────────────────────────────────
+export const ADMIN_EMAILS = [
+  "adamrozmann@gmail.com",
+  // Add more admin emails as needed
+];
+
+export function isAdminUser(email: string | null | undefined): boolean {
+  return !!email && (ADMIN_EMAILS.includes(email) || email.endsWith("@happeningmy.com"));
+}
+
 // ── Malaysian Cities & Coordinates ──────────────────────────
 export const MALAYSIA_CENTER = { lat: 3.1390, lng: 101.6869 }; // KL
 

@@ -5,7 +5,6 @@ import {
   addDoc,
   query,
   where,
-  orderBy,
   limit,
   Timestamp,
   QueryConstraint,
@@ -22,10 +21,18 @@ export async function GET(request: NextRequest) {
   const city = searchParams.get("city");
   const isFree = searchParams.get("isFree");
   const q = searchParams.get("q");
+  const showPending = searchParams.get("status") === "pending";
 
   try {
     const eventsRef = collection(db, EVENTS_COLLECTION);
     const constraints: QueryConstraint[] = [];
+
+    // By default only show published events; ?status=pending for admin review
+    if (showPending) {
+      constraints.push(where("status", "==", "pending"));
+    } else {
+      constraints.push(where("status", "==", "published"));
+    }
 
     if (category) {
       constraints.push(where("category", "==", category));
@@ -37,7 +44,6 @@ export async function GET(request: NextRequest) {
       constraints.push(where("isFree", "==", isFree === "true"));
     }
 
-    constraints.push(orderBy("date", "asc"));
     constraints.push(limit(100));
 
     const fireQuery = query(eventsRef, ...constraints);
@@ -49,8 +55,22 @@ export async function GET(request: NextRequest) {
       ...doc.data(),
     }));
 
-    // Fall back to seed data when Firestore is empty
+    // Sort by date in JS to avoid needing a Firestore composite index
+    events.sort((a: { date?: string }, b: { date?: string }) =>
+      (a.date || "").localeCompare(b.date || "")
+    );
+
+    // Filter out past events unless ?includePast=true
+    if (searchParams.get("includePast") !== "true") {
+      const today = new Date().toISOString().slice(0, 10);
+      events = events.filter(
+        (e: { date?: string; endDate?: string }) => (e.endDate || e.date || "") >= today
+      );
+    }
+
+    // Fall back to seed data only when Firestore is truly empty
     if (events.length === 0) {
+      console.warn("[API /events] Firestore returned 0 events, serving seed data");
       events = [...SEED_EVENTS];
     }
 

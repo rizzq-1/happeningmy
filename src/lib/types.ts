@@ -26,7 +26,7 @@ export interface HappeningEvent {
   attendeeCount: number;
   maxCapacity?: number;
   sdgGoals: number[];
-  status: "draft" | "published" | "cancelled";
+  status: "draft" | "pending" | "published" | "cancelled";
   source: "manual" | "ai-extracted" | "api" | "web";
   createdAt: string;
   updatedAt: string;

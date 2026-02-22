@@ -262,7 +262,13 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
 
             {/* Actions */}
             <div className="space-y-2">
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all text-sm">
+              <button
+                onClick={() => {
+                  const url = event.website || `https://www.google.com/search?q=${encodeURIComponent(event.title + " " + event.city + " tickets")}`;
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all text-sm"
+              >
                 I&apos;m Going! 🎉
               </button>
               <div className="flex gap-2">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { isAdminUser } from "@/lib/constants";
 import {
   MapPin,
   Search,
@@ -16,17 +17,20 @@ import {
   User,
 } from "lucide-react";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { href: "/", label: "Discover", icon: MapPin },
   { href: "/search", label: "Search", icon: Search },
   { href: "/upload", label: "Snapshot", icon: Upload },
   { href: "/saved", label: "Saved", icon: Heart },
-  { href: "/dashboard", label: "Impact", icon: BarChart3 },
 ];
+
+const ADMIN_NAV_LINK = { href: "/dashboard", label: "Impact", icon: BarChart3 };
 
 export default function Navbar() {
   const { user, signInWithGoogle, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isAdmin = isAdminUser(user?.email);
+  const NAV_LINKS = isAdmin ? [...BASE_NAV_LINKS, ADMIN_NAV_LINK] : BASE_NAV_LINKS;
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
