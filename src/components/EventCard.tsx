@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, MapPin, Tag, Users } from "lucide-react";
+import { Calendar, MapPin, Tag } from "lucide-react";
 import { HappeningEvent } from "@/lib/types";
 import { CATEGORY_CONFIG } from "@/lib/constants";
 import { format, parseISO } from "date-fns";
@@ -113,12 +113,6 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <Users size={13} className="text-purple-500" />
-              <span>
-                {event.attendeeCount.toLocaleString()} attending
-              </span>
-            </div>
             <div className="flex gap-1">
               {event.tags.slice(0, 2).map((tag) => (
                 <span

@@ -1,13 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
   Calendar,
   Clock,
   MapPin,
-  Users,
   Tag,
   Globe,
   Mail,
@@ -18,7 +17,9 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SEED_EVENTS, CATEGORY_CONFIG } from "@/lib/constants";
+import { getEventById } from "@/lib/events";
 import EventMap from "@/components/EventMap";
+import { HappeningEvent } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 
 interface EventDetailPageProps {
@@ -27,7 +28,28 @@ interface EventDetailPageProps {
 
 export default function EventDetailPage({ params }: EventDetailPageProps) {
   const { id } = use(params);
-  const event = SEED_EVENTS.find((e) => e.id === id);
+  const [event, setEvent] = useState<HappeningEvent | null | undefined>(
+    () => SEED_EVENTS.find((e) => e.id === id) || undefined
+  );
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getEventById(id)
+      .then((result) => {
+        if (result) setEvent(result);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [id]);
+
+  if (loading && !event) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-500">Loading event...</p>
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -203,15 +225,6 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                   {event.city}, {event.state}
                 </p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Users size={18} className="text-indigo-500 shrink-0" />
-              <p className="text-sm text-gray-700">
-                {event.attendeeCount.toLocaleString()} attending
-                {event.maxCapacity &&
-                  ` / ${event.maxCapacity.toLocaleString()} max`}
-              </p>
             </div>
 
             <hr className="border-gray-100" />

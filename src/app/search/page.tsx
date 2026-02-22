@@ -7,6 +7,7 @@ import SearchBar from "@/components/SearchBar";
 import EventCard from "@/components/EventCard";
 import EventMap from "@/components/EventMap";
 import { SEED_EVENTS } from "@/lib/constants";
+import { getEvents } from "@/lib/events";
 import { HappeningEvent, SearchFilters, EventCategory } from "@/lib/types";
 
 interface WebEvent extends HappeningEvent {
@@ -15,6 +16,7 @@ interface WebEvent extends HappeningEvent {
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const [allEvents, setAllEvents] = useState<HappeningEvent[]>(SEED_EVENTS);
   const [events, setEvents] = useState<HappeningEvent[]>(SEED_EVENTS);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState<"grid" | "map">("grid");
@@ -28,6 +30,19 @@ function SearchContent() {
 
   const initialCategory = searchParams.get("category") || "";
   const initialCity = searchParams.get("city") || "";
+
+  // Load events from Firestore on mount
+  useEffect(() => {
+    getEvents()
+      .then((firestoreEvents) => {
+        setAllEvents(firestoreEvents);
+        setEvents(firestoreEvents);
+      })
+      .catch(() => {
+        setAllEvents(SEED_EVENTS);
+        setEvents(SEED_EVENTS);
+      });
+  }, []);
 
   useEffect(() => {
     if (initialCategory || initialCity) {
@@ -47,7 +62,7 @@ function SearchContent() {
     setSearchContext(null);
     setSearchEngine(null);
 
-    let results = [...SEED_EVENTS];
+    let results = [...allEvents];
 
     if (filters.query) {
       const q = filters.query.toLowerCase();
@@ -74,7 +89,7 @@ function SearchContent() {
       setEvents(results);
       setLoading(false);
     }, 300);
-  }, []);
+  }, [allEvents]);
 
   const handleSemanticSearch = async () => {
     if (!semanticQuery.trim()) return;
@@ -101,7 +116,7 @@ function SearchContent() {
         setSearchEngine(data.engine || null);
       } else {
         const q = semanticQuery.toLowerCase();
-        const results = SEED_EVENTS.filter(
+        const results = allEvents.filter(
           (e) =>
             e.title.toLowerCase().includes(q) ||
             e.description.toLowerCase().includes(q) ||
@@ -111,7 +126,7 @@ function SearchContent() {
       }
     } catch {
       const q = semanticQuery.toLowerCase();
-      const results = SEED_EVENTS.filter(
+      const results = allEvents.filter(
         (e) =>
           e.title.toLowerCase().includes(q) ||
           e.description.toLowerCase().includes(q) ||

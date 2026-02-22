@@ -1,14 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Target, Sparkles } from "lucide-react";
 import { SDGCard, StatsOverview } from "@/components/Dashboard";
 import { SDG_METRICS, MOCK_DASHBOARD_STATS, SEED_EVENTS, MOCK_HEATMAP_DATA } from "@/lib/constants";
+import { getEvents } from "@/lib/events";
 import EventMap from "@/components/EventMap";
+import { HappeningEvent } from "@/lib/types";
 
 export default function DashboardPage() {
-  const aiEvents = SEED_EVENTS.filter((e) => e.source === "ai-extracted").length;
-  const totalEvents = SEED_EVENTS.length;
-  const aiPercentage = Math.round((aiEvents / totalEvents) * 100);
+  const [events, setEvents] = useState<HappeningEvent[]>(SEED_EVENTS);
+
+  useEffect(() => {
+    getEvents().then(setEvents).catch(() => setEvents(SEED_EVENTS));
+  }, []);
+
+  const aiEvents = events.filter((e) => e.source === "ai-extracted").length;
+  const totalEvents = events.length;
+  const aiPercentage = totalEvents > 0 ? Math.round((aiEvents / totalEvents) * 100) : 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -103,7 +112,7 @@ export default function DashboardPage() {
             🔥 Community Engagement Heatmap
           </h3>
           <EventMap
-            events={SEED_EVENTS}
+            events={events}
             heatmapData={MOCK_HEATMAP_DATA}
             showHeatmap={true}
             className="w-full h-[320px]"

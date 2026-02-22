@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { SEED_EVENTS } from "@/lib/constants";
+import { HappeningEvent } from "@/lib/types";
+
+const EVENTS_COLLECTION = "events";
+
+/** Fetch events from Firestore, falling back to seed data. */
+async function getLocalEvents(): Promise<HappeningEvent[]> {
+  try {
+    const eventsRef = collection(db, EVENTS_COLLECTION);
+    const q = query(eventsRef, orderBy("date", "asc"), limit(100));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return SEED_EVENTS;
+    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as HappeningEvent[];
+  } catch {
+    return SEED_EVENTS;
+  }
+}
 
 /**
  * POST /api/search
@@ -56,9 +74,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 });
     }
 
-    // ── Also search local seed events ───────────────────────
+    // ── Search local Firestore events ────────────────────────
+    const allLocalEvents = await getLocalEvents();
     const normalizedQuery = query.toLowerCase();
-    const localResults = SEED_EVENTS.filter((event) => {
+    const localResults = allLocalEvents.filter((event) => {
       const text = `${event.title} ${event.description} ${event.tags.join(" ")} ${event.venue} ${event.city} ${event.category}`.toLowerCase();
       const words = normalizedQuery.split(/\s+/);
       return words.some((w) => text.includes(w));
@@ -147,8 +166,9 @@ export async function POST(request: NextRequest) {
 
     // Fallback to local search on error
     const { query } = await request.clone().json().catch(() => ({ query: "" }));
+    const fallbackEvents = await getLocalEvents();
     const normalizedQuery = (query || "").toLowerCase();
-    const localResults = SEED_EVENTS.filter((event) => {
+    const localResults = fallbackEvents.filter((event) => {
       const text = `${event.title} ${event.description} ${event.tags.join(" ")} ${event.venue} ${event.city} ${event.category}`.toLowerCase();
       return normalizedQuery.split(/\s+/).some((w: string) => text.includes(w));
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -15,11 +15,17 @@ import {
 import EventCard from "@/components/EventCard";
 import EventMap from "@/components/EventMap";
 import { SEED_EVENTS, MOCK_HEATMAP_DATA, CATEGORY_CONFIG } from "@/lib/constants";
+import { getEvents } from "@/lib/events";
 import { HappeningEvent } from "@/lib/types";
 
 export default function HomePage() {
+  const [events, setEvents] = useState<HappeningEvent[]>(SEED_EVENTS);
   const [selectedEvent, setSelectedEvent] = useState<HappeningEvent | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
+
+  useEffect(() => {
+    getEvents().then(setEvents).catch(() => setEvents(SEED_EVENTS));
+  }, []);
 
   const handleMarkerClick = useCallback((event: HappeningEvent) => {
     setSelectedEvent(event);
@@ -125,7 +131,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <EventMap
-              events={SEED_EVENTS}
+              events={events}
               heatmapData={MOCK_HEATMAP_DATA}
               showHeatmap={showHeatmap}
               onMarkerClick={handleMarkerClick}
@@ -165,7 +171,6 @@ export default function HomePage() {
                   <p>📅 {selectedEvent.date} · {selectedEvent.time}</p>
                   <p>📍 {selectedEvent.venue}, {selectedEvent.city}</p>
                   <p>💰 {selectedEvent.isFree ? "Free" : selectedEvent.price}</p>
-                  <p>👥 {selectedEvent.attendeeCount.toLocaleString()} attending</p>
                 </div>
                 <Link
                   href={`/events/${selectedEvent.id}`}
@@ -180,7 +185,7 @@ export default function HomePage() {
                   Upcoming Events
                 </h3>
                 <div className="space-y-1">
-                  {SEED_EVENTS.map((event) => (
+                  {events.map((event) => (
                     <EventCard key={event.id} event={event} compact />
                   ))}
                 </div>
@@ -210,7 +215,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {SEED_EVENTS.slice(0, 8).map((event) => (
+          {events.slice(0, 8).map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
         </div>
