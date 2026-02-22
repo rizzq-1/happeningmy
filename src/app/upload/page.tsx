@@ -3,17 +3,20 @@
 import { useState } from "react";
 import { Sparkles, Upload as UploadIcon, CheckCircle2 } from "lucide-react";
 import PosterUploader from "@/components/PosterUploader";
+import { uploadPoster } from "@/lib/events";
 import { GeminiExtractionResult } from "@/lib/types";
 
 export default function UploadPage() {
   const [extracted, setExtracted] = useState<GeminiExtractionResult | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
+  const [posterFile, setPosterFile] = useState<File | null>(null);
   const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
-  const handleExtracted = (result: GeminiExtractionResult, imgUrl: string) => {
+  const handleExtracted = (result: GeminiExtractionResult, imgUrl: string, file: File) => {
     setExtracted(result);
     setImageUrl(imgUrl);
+    setPosterFile(file);
     setPublished(false);
   };
 
@@ -22,12 +25,22 @@ export default function UploadPage() {
 
     setPublishing(true);
     try {
+      // Upload poster to Firebase Storage for a persistent URL
+      let finalImageUrl = imageUrl || "";
+      if (posterFile) {
+        try {
+          finalImageUrl = await uploadPoster(posterFile);
+        } catch (err) {
+          console.error("Storage upload failed, using local preview:", err);
+        }
+      }
+
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...extracted,
-          imageUrl: imageUrl || "",
+          imageUrl: finalImageUrl,
           lat: 3.139 + (Math.random() - 0.5) * 0.05,
           lng: 101.6869 + (Math.random() - 0.5) * 0.05,
           attendeeCount: 0,

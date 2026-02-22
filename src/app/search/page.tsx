@@ -114,6 +114,15 @@ function SearchContent() {
         setAiSummary(data.aiSummary || null);
         setSearchContext(data.searchContext || null);
         setSearchEngine(data.engine || null);
+
+        // Cache web results so event detail page can display them
+        if (data.webResults?.length) {
+          const cached = JSON.parse(sessionStorage.getItem("webEvents") || "{}");
+          for (const evt of data.webResults) {
+            cached[evt.id] = evt;
+          }
+          sessionStorage.setItem("webEvents", JSON.stringify(cached));
+        }
       } else {
         const q = semanticQuery.toLowerCase();
         const results = allEvents.filter(

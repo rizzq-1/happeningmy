@@ -5,7 +5,7 @@ import { Upload, Camera, Loader2, CheckCircle2, AlertCircle, Sparkles } from "lu
 import { GeminiExtractionResult } from "@/lib/types";
 
 interface PosterUploaderProps {
-  onExtracted: (result: GeminiExtractionResult, imageUrl: string) => void;
+  onExtracted: (result: GeminiExtractionResult, imageUrl: string, file: File) => void;
 }
 
 export default function PosterUploader({ onExtracted }: PosterUploaderProps) {
@@ -68,7 +68,7 @@ export default function PosterUploader({ onExtracted }: PosterUploaderProps) {
       const data = await res.json();
       setExtraction(data.extraction);
       setStatus("success");
-      onExtracted(data.extraction, preview || "");
+      onExtracted(data.extraction, preview || "", file);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Something went wrong");
       setStatus("error");

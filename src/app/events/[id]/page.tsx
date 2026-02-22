@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { SEED_EVENTS, CATEGORY_CONFIG } from "@/lib/constants";
 import { getEventById } from "@/lib/events";
+import { useSavedEvents } from "@/lib/useSavedEvents";
 import EventMap from "@/components/EventMap";
 import { HappeningEvent } from "@/lib/types";
 import { format, parseISO } from "date-fns";
@@ -32,14 +33,36 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
     () => SEED_EVENTS.find((e) => e.id === id) || undefined
   );
   const [loading, setLoading] = useState(true);
+  const { isSaved, toggleSave } = useSavedEvents();
+  const [shareToast, setShareToast] = useState(false);
 
   useEffect(() => {
+    // Try Firestore first
     getEventById(id)
       .then((result) => {
-        if (result) setEvent(result);
+        if (result) {
+          setEvent(result);
+        } else {
+          // Fallback: check sessionStorage for web search results
+          try {
+            const cached = JSON.parse(sessionStorage.getItem("webEvents") || "{}");
+            if (cached[id]) {
+              setEvent(cached[id] as HappeningEvent);
+            }
+          } catch { /* ignore */ }
+        }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        // Also try sessionStorage on error
+        try {
+          const cached = JSON.parse(sessionStorage.getItem("webEvents") || "{}");
+          if (cached[id]) {
+            setEvent(cached[id] as HappeningEvent);
+          }
+        } catch { /* ignore */ }
+        setLoading(false);
+      });
   }, [id]);
 
   if (loading && !event) {
@@ -104,7 +127,15 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         <div className="lg:col-span-2 space-y-6">
           {/* Hero image area */}
           <div className="relative h-64 md:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex items-center justify-center">
-            <span className="text-7xl">{cat.emoji}</span>
+            {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+              <img
+                src={event.imageUrl}
+                alt={event.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-7xl">{cat.emoji}</span>
+            )}
             <div
               className="absolute top-4 left-4 px-3 py-1.5 rounded-lg text-white text-sm font-semibold"
               style={{ backgroundColor: cat.color }}
@@ -235,13 +266,44 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
                 I&apos;m Going! 🎉
               </button>
               <div className="flex gap-2">
-                <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-all">
-                  <Heart size={14} /> Save
+                <button
+                  onClick={() => toggleSave(event.id)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border rounded-xl text-sm transition-all ${
+                    isSaved(event.id)
+                      ? "bg-pink-50 border-pink-200 text-pink-600"
+                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Heart size={14} className={isSaved(event.id) ? "fill-pink-500" : ""} />
+                  {isSaved(event.id) ? "Saved" : "Save"}
                 </button>
-                <button className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-all">
+                <button
+                  onClick={async () => {
+                    const url = `${window.location.origin}/events/${event.id}`;
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: event.title,
+                          text: `${event.title} — ${event.date} at ${event.venue}, ${event.city}`,
+                          url,
+                        });
+                      } catch { /* user cancelled */ }
+                    } else {
+                      await navigator.clipboard.writeText(url);
+                      setShareToast(true);
+                      setTimeout(() => setShareToast(false), 2000);
+                    }
+                  }}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-all"
+                >
                   <Share2 size={14} /> Share
                 </button>
               </div>
+              {shareToast && (
+                <p className="text-xs text-center text-emerald-600 font-medium animate-pulse">
+                  Link copied to clipboard!
+                </p>
+              )}
             </div>
 
             <hr className="border-gray-100" />

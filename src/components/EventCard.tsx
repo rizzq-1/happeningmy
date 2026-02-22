@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, MapPin, Tag } from "lucide-react";
+import { Calendar, MapPin, Tag, Heart } from "lucide-react";
 import { HappeningEvent } from "@/lib/types";
 import { CATEGORY_CONFIG } from "@/lib/constants";
+import { useSavedEvents } from "@/lib/useSavedEvents";
 import { format, parseISO } from "date-fns";
 
 interface EventCardProps {
@@ -12,6 +13,7 @@ interface EventCardProps {
 }
 
 export default function EventCard({ event, compact = false }: EventCardProps) {
+  const { isSaved, toggleSave } = useSavedEvents();
   const cat = CATEGORY_CONFIG[event.category] || {
     label: event.category,
     emoji: "📌",
@@ -32,12 +34,20 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
         href={`/events/${event.id}`}
         className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
       >
-        <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
-          style={{ backgroundColor: cat.color + "18" }}
-        >
-          {cat.emoji}
-        </div>
+        {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            className="w-10 h-10 rounded-lg object-cover shrink-0"
+          />
+        ) : (
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
+            style={{ backgroundColor: cat.color + "18" }}
+          >
+            {cat.emoji}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <h4 className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
             {event.title}
@@ -62,9 +72,17 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
     >
       {/* Image */}
       <div className="relative h-44 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center text-5xl">
-          {cat.emoji}
-        </div>
+        {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-5xl">
+            {cat.emoji}
+          </div>
+        )}
         {/* Category badge */}
         <div
           className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-white text-xs font-semibold shadow-sm"
@@ -90,6 +108,21 @@ export default function EventCard({ event, compact = false }: EventCardProps) {
             ✨ AI Extracted
           </div>
         )}
+        {/* Save button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSave(event.id);
+          }}
+          className={`absolute bottom-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
+            isSaved(event.id)
+              ? "bg-pink-500 text-white"
+              : "bg-white/80 backdrop-blur text-gray-500 hover:bg-white hover:text-pink-500"
+          }`}
+        >
+          <Heart size={14} className={isSaved(event.id) ? "fill-white" : ""} />
+        </button>
       </div>
 
       {/* Content */}

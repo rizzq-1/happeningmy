@@ -8,6 +8,7 @@ import {
   Search,
   Upload,
   BarChart3,
+  Heart,
   Menu,
   X,
   LogIn,
@@ -19,6 +20,7 @@ const NAV_LINKS = [
   { href: "/", label: "Discover", icon: MapPin },
   { href: "/search", label: "Search", icon: Search },
   { href: "/upload", label: "Snapshot", icon: Upload },
+  { href: "/saved", label: "Saved", icon: Heart },
   { href: "/dashboard", label: "Impact", icon: BarChart3 },
 ];
 
