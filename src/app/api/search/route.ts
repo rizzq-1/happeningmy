@@ -112,7 +112,7 @@ async function getLocalEvents(): Promise<HappeningEvent[]> {
 
 const SEARCH_PROMPT = `You are an event discovery assistant for Malaysia. The user is looking for events.
 
-Search the web for REAL upcoming events in Malaysia matching the user's query. Only include events you can verify from real sources like Eventbrite, TimeOut KL, WhatsOnKL, Ticketmaster, Facebook Events, or official event websites.
+Search the web for REAL upcoming events in Malaysia matching the user's query. Only include events you can verify from real sources like Eventbrite, TimeOut KL, Ticketmaster, Facebook Events, or official event websites.
 
 Return ONLY valid JSON with this structure:
 {

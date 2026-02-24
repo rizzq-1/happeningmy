@@ -13,6 +13,12 @@ interface EventCardProps {
   externalUrl?: string;
 }
 
+/** True when the value looks like a real image URL rather than an emoji or placeholder path */
+function isRealImageUrl(url: string | undefined | null): boolean {
+  if (!url) return false;
+  return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:");
+}
+
 export default function EventCard({ event, compact = false, externalUrl }: EventCardProps) {
   const { isSaved, toggleSave } = useSavedEvents();
   const href = externalUrl || `/events/${event.id}`;
@@ -23,6 +29,12 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
     emoji: "📌",
     color: "#6B7280",
   };
+
+  // If imageUrl is an emoji stored in DB, prefer it over the category default
+  const displayEmoji = (event.imageUrl && !isRealImageUrl(event.imageUrl) && !event.imageUrl.startsWith("/"))
+    ? event.imageUrl
+    : cat.emoji;
+  const hasRealImage = isRealImageUrl(event.imageUrl);
 
   const formattedDate = (() => {
     try {
@@ -40,7 +52,7 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
         rel={linkRel}
         className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
       >
-        {event.imageUrl && !event.imageUrl.startsWith("/images/") && event.imageUrl !== "/placeholder-event.jpg" ? (
+        {hasRealImage ? (
           <img
             src={event.imageUrl}
             alt={event.title}
@@ -51,7 +63,7 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
             className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
             style={{ backgroundColor: cat.color + "18" }}
           >
-            {cat.emoji}
+            {displayEmoji}
           </div>
         )}
         <div className="min-w-0 flex-1">
@@ -80,7 +92,7 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
     >
       {/* Image */}
       <div className="relative h-44 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-        {event.imageUrl && !event.imageUrl.startsWith("/images/") && event.imageUrl !== "/placeholder-event.jpg" ? (
+        {hasRealImage ? (
           <img
             src={event.imageUrl}
             alt={event.title}
@@ -88,7 +100,7 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center text-5xl">
-            {cat.emoji}
+            {displayEmoji}
           </div>
         )}
         {/* Category badge */}

@@ -7,7 +7,6 @@ import { SDG_METRICS, MOCK_DASHBOARD_STATS, SEED_EVENTS, MOCK_HEATMAP_DATA, CATE
 import { getEvents } from "@/lib/events";
 import EventMap from "@/components/EventMap";
 import { HappeningEvent } from "@/lib/types";
-import { WHATSONKL_PAGES } from "@/lib/timeout-kl";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminUser } from "@/lib/constants";
 
@@ -21,14 +20,6 @@ export default function DashboardPage() {
   const [pendingEvents, setPendingEvents] = useState<HappeningEvent[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [reviewMessage, setReviewMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  // WhatsOnKL import state
-  const [wklPage, setWklPage] = useState("1");
-  const [wklPageTo, setWklPageTo] = useState("1");
-  const [wklLoading, setWklLoading] = useState(false);
-  const [wklPreview, setWklPreview] = useState<HappeningEvent[]>([]);
-  const [wklMessage, setWklMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [wklProgress, setWklProgress] = useState<string | null>(null);
 
   // Gemini Web Import state
   const [geminiQuery, setGeminiQuery] = useState("");
@@ -205,71 +196,6 @@ export default function DashboardPage() {
     }
   }
 
-  // ── WhatsOnKL preview (GET) ───────────────────────────────
-  async function handleWklPreview() {
-    setWklLoading(true);
-    setWklMessage(null);
-    setWklPreview([]);
-    try {
-      const params = new URLSearchParams({ page: wklPage });
-      const res = await fetch(`/api/timeout-kl?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch");
-      setWklPreview(data.events);
-      setWklMessage({
-        type: "success",
-        text: `Found ${data.totalCount} events from WhatsOnKL.`,
-      });
-    } catch (err) {
-      setWklMessage({ type: "error", text: err instanceof Error ? err.message : "Unknown error" });
-    } finally {
-      setWklLoading(false);
-    }
-  }
-
-  // ── WhatsOnKL import (POST) ───────────────────────────────
-  async function handleWklImport() {
-    const from = Number(wklPage);
-    const to = Number(wklPageTo);
-    const startPage = Math.min(from, to);
-    const endPage = Math.max(from, to);
-
-    setWklLoading(true);
-    setWklMessage(null);
-    setWklProgress(null);
-
-    let totalImported = 0;
-    let totalSkipped = 0;
-
-    try {
-      for (let p = startPage; p <= endPage; p++) {
-        setWklProgress(`Importing page ${p} of ${endPage}...`);
-        const res = await fetch("/api/timeout-kl", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ page: p }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `Import failed on page ${p}`);
-        totalImported += data.imported || 0;
-        totalSkipped += data.skipped || 0;
-      }
-      setWklProgress(null);
-      setWklMessage({
-        type: "success",
-        text: `Imported ${totalImported} events from pages ${startPage}–${endPage} (${totalSkipped} duplicates skipped).`,
-      });
-      getEvents()
-        .then((fetched) => { if (fetched.length > 0) setEvents(fetched); })
-        .catch(() => {});
-    } catch (err) {
-      setWklProgress(null);
-      setWklMessage({ type: "error", text: err instanceof Error ? err.message : "Unknown error" });
-    } finally {
-      setWklLoading(false);
-    }
-  }
-
   // ── Gemini Web Search ─────────────────────────────────────
   async function handleGeminiSearch() {
     if (!geminiQuery.trim()) return;
@@ -443,117 +369,6 @@ export default function DashboardPage() {
             className="w-full h-[320px]"
           />
         </div>
-      </div>
-
-      {/* WhatsOnKL Import Panel */}
-      <div className="mt-10 bg-gradient-to-br from-rose-50 to-orange-50 rounded-2xl border border-rose-100 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Download size={20} className="text-rose-600" />
-          <h3 className="text-lg font-bold text-gray-900">Import from WhatsOnKL</h3>
-          <span className="ml-auto text-xs text-rose-500 bg-rose-100 px-2 py-1 rounded-full font-medium">
-            whatsonkl.com
-          </span>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">
-          Scrape the latest KL events from WhatsOnKL — live music, food, nightlife, culture &amp; more.
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="flex items-center gap-2 flex-1">
-            <select
-              value={wklPage}
-              onChange={(e) => setWklPage(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-rose-200 focus:ring-2 focus:ring-rose-300 focus:outline-none text-sm bg-white"
-            >
-              {WHATSONKL_PAGES.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-gray-400 font-medium">to</span>
-            <select
-              value={wklPageTo}
-              onChange={(e) => setWklPageTo(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-rose-200 focus:ring-2 focus:ring-rose-300 focus:outline-none text-sm bg-white"
-            >
-              {WHATSONKL_PAGES.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={handleWklPreview}
-            disabled={wklLoading}
-            className="px-5 py-2.5 rounded-xl bg-rose-500 text-white font-semibold text-sm hover:bg-rose-600 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-          >
-            {wklLoading ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
-            Preview
-          </button>
-          <button
-            onClick={handleWklImport}
-            disabled={wklLoading}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-orange-600 text-white font-semibold text-sm hover:from-rose-700 hover:to-orange-700 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-          >
-            {wklLoading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            Import {wklPage === wklPageTo ? "Page" : `Pages ${wklPage}–${wklPageTo}`}
-          </button>
-        </div>
-
-        {/* Progress indicator */}
-        {wklProgress && (
-          <div className="flex items-center gap-2 p-3 rounded-xl text-sm mb-4 bg-blue-50 text-blue-700 border border-blue-200">
-            <Loader2 size={16} className="animate-spin" />
-            {wklProgress}
-          </div>
-        )}
-
-        {/* Status message */}
-        {wklMessage && (
-          <div
-            className={`flex items-center gap-2 p-3 rounded-xl text-sm mb-4 ${
-              wklMessage.type === "success"
-                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                : "bg-red-50 text-red-700 border border-red-200"
-            }`}
-          >
-            {wklMessage.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-            {wklMessage.text}
-          </div>
-        )}
-
-        {/* Preview results */}
-        {wklPreview.length > 0 && (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {wklPreview.map((ev) => (
-              <div
-                key={ev.id}
-                className="flex items-center gap-3 bg-white rounded-xl p-3 border border-gray-100"
-              >
-                {ev.imageUrl && ev.imageUrl !== "/placeholder-event.jpg" && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={ev.imageUrl}
-                    alt=""
-                    className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 truncate">{ev.title}</p>
-                  <p className="text-xs text-gray-500">
-                    {ev.date} · {ev.venue && ev.venue !== "See website" ? `${ev.venue} · ` : ""}
-                    {ev.city} · {ev.isFree ? "Free" : ev.price}
-                  </p>
-                </div>
-                <span className="text-xs bg-rose-100 text-rose-600 px-2 py-1 rounded-lg font-medium flex-shrink-0">
-                  {ev.category}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Gemini Web Event Importer */}

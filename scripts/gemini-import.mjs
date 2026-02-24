@@ -139,7 +139,7 @@ Each event object must have:
   "imageUrl": "Real image URL from the event page or null",
   "sdgGoals": [relevant SDG numbers: 4=Education, 8=Economic Growth, 11=Sustainable Communities],
   "confidence": 0.0 to 1.0 (how certain you are this is a real upcoming event),
-  "source": "Where you found it (e.g. 'eventbrite', 'timeout-kl', 'peatix', 'official-site')"
+  "source": "Where you found it (e.g. 'eventbrite', 'peatix', 'official-site')"
 }
 
 IMPORTANT:

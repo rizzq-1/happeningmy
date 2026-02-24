@@ -127,14 +127,16 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         <div className="lg:col-span-2 space-y-6">
           {/* Hero image area */}
           <div className="relative h-64 md:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex items-center justify-center">
-            {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+            {event.imageUrl && (event.imageUrl.startsWith("http://") || event.imageUrl.startsWith("https://") || event.imageUrl.startsWith("data:")) ? (
               <img
                 src={event.imageUrl}
                 alt={event.title}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : (
-              <span className="text-7xl">{cat.emoji}</span>
+              <span className="text-7xl">
+                {event.imageUrl && !event.imageUrl.startsWith("/") ? event.imageUrl : cat.emoji}
+              </span>
             )}
             <div
               className="absolute top-4 left-4 px-3 py-1.5 rounded-lg text-white text-sm font-semibold"
