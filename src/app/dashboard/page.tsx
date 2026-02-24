@@ -30,6 +30,14 @@ export default function DashboardPage() {
   const [wklMessage, setWklMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [wklProgress, setWklProgress] = useState<string | null>(null);
 
+  // Gemini Web Import state
+  const [geminiQuery, setGeminiQuery] = useState("");
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [geminiPreview, setGeminiPreview] = useState<(HappeningEvent & { confidence?: number; source?: string; website?: string })[]>([]);
+  const [geminiMessage, setGeminiMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [geminiSelected, setGeminiSelected] = useState<Set<number>>(new Set());
+  const [geminiImporting, setGeminiImporting] = useState(false);
+
   // Admin event editor modal
   const [editingEvent, setEditingEvent] = useState<HappeningEvent | null>(null);
   const [editForm, setEditForm] = useState<{
@@ -262,6 +270,76 @@ export default function DashboardPage() {
     }
   }
 
+  // ── Gemini Web Search ─────────────────────────────────────
+  async function handleGeminiSearch() {
+    if (!geminiQuery.trim()) return;
+    setGeminiLoading(true);
+    setGeminiMessage(null);
+    setGeminiPreview([]);
+    setGeminiSelected(new Set());
+    try {
+      const params = new URLSearchParams({ q: geminiQuery.trim() });
+      const res = await fetch(`/api/gemini-import?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      setGeminiPreview(data.events || []);
+      // Select all by default
+      setGeminiSelected(new Set((data.events || []).map((_: unknown, i: number) => i)));
+      setGeminiMessage({
+        type: "success",
+        text: `Found ${data.totalCount} events from the web.`,
+      });
+    } catch (err) {
+      setGeminiMessage({ type: "error", text: err instanceof Error ? err.message : "Unknown error" });
+    } finally {
+      setGeminiLoading(false);
+    }
+  }
+
+  // ── Gemini Import Selected ────────────────────────────────
+  async function handleGeminiImport() {
+    const toImport = geminiPreview.filter((_, i) => geminiSelected.has(i));
+    if (toImport.length === 0) return;
+    setGeminiImporting(true);
+    setGeminiMessage(null);
+    try {
+      const res = await fetch("/api/gemini-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ events: toImport }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Import failed");
+      setGeminiMessage({ type: "success", text: data.message });
+      setGeminiPreview([]);
+      setGeminiSelected(new Set());
+      // Refresh events and pending queue
+      getEvents({ includePast: true }).then((fetched) => { if (fetched.length > 0) setEvents(fetched); }).catch(() => {});
+      if (isAdmin) fetchPendingEvents();
+    } catch (err) {
+      setGeminiMessage({ type: "error", text: err instanceof Error ? err.message : "Unknown error" });
+    } finally {
+      setGeminiImporting(false);
+    }
+  }
+
+  function toggleGeminiSelect(index: number) {
+    setGeminiSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
+
+  function toggleGeminiSelectAll() {
+    if (geminiSelected.size === geminiPreview.length) {
+      setGeminiSelected(new Set());
+    } else {
+      setGeminiSelected(new Set(geminiPreview.map((_, i) => i)));
+    }
+  }
+
   const aiEvents = events.filter((e) => e.source === "ai-extracted").length;
   const totalEvents = events.length;
   const aiPercentage = totalEvents > 0 ? Math.round((aiEvents / totalEvents) * 100) : 0;
@@ -475,6 +553,147 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Gemini Web Event Importer */}
+      <div className="mt-10 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border border-purple-100 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles size={20} className="text-purple-600" />
+          <h3 className="text-lg font-bold text-gray-900">Gemini Web Importer</h3>
+          <span className="ml-auto text-xs text-purple-500 bg-purple-100 px-2 py-1 rounded-full font-medium">
+            AI-powered
+          </span>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          Search the web for real Malaysian events using Gemini AI. Found events are imported as pending for admin review.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <input
+            type="text"
+            value={geminiQuery}
+            onChange={(e) => setGeminiQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleGeminiSearch()}
+            placeholder="e.g. music festivals KL March 2026, tech meetups Cyberjaya..."
+            className="flex-1 px-4 py-2.5 rounded-xl border border-purple-200 focus:ring-2 focus:ring-purple-300 focus:outline-none text-sm bg-white"
+          />
+          <button
+            onClick={handleGeminiSearch}
+            disabled={geminiLoading || !geminiQuery.trim()}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold text-sm hover:from-purple-700 hover:to-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+          >
+            {geminiLoading ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
+            Search Web
+          </button>
+        </div>
+
+        {/* Quick search suggestions */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {[
+            "upcoming events KL 2026",
+            "music concerts Malaysia",
+            "food festivals Penang",
+            "tech meetups Cyberjaya",
+            "charity events Malaysia",
+            "art exhibitions KL",
+          ].map((suggestion) => (
+            <button
+              key={suggestion}
+              onClick={() => { setGeminiQuery(suggestion); }}
+              className="text-xs px-3 py-1.5 rounded-lg bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+
+        {/* Status message */}
+        {geminiMessage && (
+          <div
+            className={`flex items-center gap-2 p-3 rounded-xl text-sm mb-4 ${
+              geminiMessage.type === "success"
+                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                : "bg-red-50 text-red-700 border border-red-200"
+            }`}
+          >
+            {geminiMessage.type === "success" ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+            {geminiMessage.text}
+          </div>
+        )}
+
+        {/* Preview results */}
+        {geminiPreview.length > 0 && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={toggleGeminiSelectAll}
+                className="text-xs text-purple-600 hover:text-purple-800 font-medium"
+              >
+                {geminiSelected.size === geminiPreview.length ? "Deselect All" : "Select All"}
+              </button>
+              <button
+                onClick={handleGeminiImport}
+                disabled={geminiImporting || geminiSelected.size === 0}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-semibold text-sm hover:from-emerald-700 hover:to-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {geminiImporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                Import {geminiSelected.size} Event{geminiSelected.size !== 1 ? "s" : ""}
+              </button>
+            </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {geminiPreview.map((ev, i) => (
+                <div
+                  key={i}
+                  onClick={() => toggleGeminiSelect(i)}
+                  className={`flex items-center gap-3 rounded-xl p-3 border cursor-pointer transition-all ${
+                    geminiSelected.has(i)
+                      ? "bg-purple-50 border-purple-300 shadow-sm"
+                      : "bg-white border-gray-100 opacity-60"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={geminiSelected.has(i)}
+                    onChange={() => toggleGeminiSelect(i)}
+                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{ev.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {ev.date} · {ev.venue && ev.venue !== "See website" ? `${ev.venue} · ` : ""}
+                      {ev.city} · {ev.isFree ? "Free" : ev.price}
+                    </p>
+                    {ev.website && (
+                      <a
+                        href={ev.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] text-purple-500 hover:underline truncate block mt-0.5"
+                      >
+                        {ev.website}
+                      </a>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-lg font-medium">
+                      {ev.category}
+                    </span>
+                    {ev.confidence != null && (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                        ev.confidence >= 0.8 ? "bg-emerald-100 text-emerald-700" :
+                        ev.confidence >= 0.6 ? "bg-amber-100 text-amber-700" :
+                        "bg-red-100 text-red-600"
+                      }`}>
+                        {Math.round(ev.confidence * 100)}% conf
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

@@ -40,7 +40,7 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
         rel={linkRel}
         className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
       >
-        {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+        {event.imageUrl && !event.imageUrl.startsWith("/images/") && event.imageUrl !== "/placeholder-event.jpg" ? (
           <img
             src={event.imageUrl}
             alt={event.title}
@@ -80,7 +80,7 @@ export default function EventCard({ event, compact = false, externalUrl }: Event
     >
       {/* Image */}
       <div className="relative h-44 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-        {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+        {event.imageUrl && !event.imageUrl.startsWith("/images/") && event.imageUrl !== "/placeholder-event.jpg" ? (
           <img
             src={event.imageUrl}
             alt={event.title}

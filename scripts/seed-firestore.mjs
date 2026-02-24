@@ -1,9 +1,12 @@
-// Seed Firestore with events from SEED_EVENTS
-// Run with: node --env-file=.env.local scripts/seed-firestore.mjs
+// Scrape WhatsOnKL events, enrich with Gemini, and seed Firestore
+// Run with: node --env-file=.env.local scripts/seed-firestore.mjs [pages]
+// Example:  node --env-file=.env.local scripts/seed-firestore.mjs 3
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// ── Config ──────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -17,299 +20,296 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app, "happeningdb");
 
-const SEED_EVENTS = [
-  {
-    id: "evt-001",
-    title: "KL Jazz Festival 2026",
-    description: "Malaysia's premier jazz festival featuring international and local artists. Three stages, food stalls, and art installations at the iconic KLCC Park.",
-    date: "2026-03-15",
-    time: "17:00",
-    endDate: "2026-03-16",
-    endTime: "23:00",
-    venue: "KLCC Park",
-    address: "Kuala Lumpur City Centre",
-    city: "Kuala Lumpur",
-    state: "W.P. Kuala Lumpur",
-    lat: 3.1557,
-    lng: 101.7117,
-    category: "music",
-    tags: ["jazz", "live-music", "outdoor", "festival"],
-    imageUrl: "/images/jazz-fest.jpg",
-    price: "RM 150",
-    isFree: false,
-    organizer: "KL Music Foundation",
-    attendeeCount: 2400,
-    maxCapacity: 5000,
-    sdgGoals: [4, 11],
-    status: "published",
-    source: "manual",
-    createdAt: "2026-01-20T08:00:00Z",
-    updatedAt: "2026-02-10T12:00:00Z",
-  },
-  {
-    id: "evt-002",
-    title: "Penang Street Art Walk",
-    description: "Guided walking tour through George Town's UNESCO heritage zone. Explore famous murals, street installations, and hidden art gems with local artists.",
-    date: "2026-02-22",
-    time: "09:00",
-    endTime: "12:00",
-    venue: "Armenian Street",
-    address: "Lebuh Armenian, George Town",
-    city: "George Town",
-    state: "Pulau Pinang",
-    lat: 5.4164,
-    lng: 100.3370,
-    category: "arts",
-    tags: ["street-art", "walking-tour", "heritage", "culture"],
-    imageUrl: "/images/penang-art.jpg",
-    price: "Free",
-    isFree: true,
-    organizer: "Penang Heritage Trust",
-    attendeeCount: 45,
-    maxCapacity: 60,
-    sdgGoals: [4, 11],
-    status: "published",
-    source: "ai-extracted",
-    createdAt: "2026-02-01T10:00:00Z",
-    updatedAt: "2026-02-15T09:00:00Z",
-  },
-  {
-    id: "evt-003",
-    title: "Nasi Lemak Cook-Off Championship",
-    description: "Who makes the best Nasi Lemak in Malaysia? Join us for this epic cook-off featuring 30 contestants from across the nation. Free tasting for attendees!",
-    date: "2026-03-01",
-    time: "10:00",
-    endTime: "16:00",
-    venue: "Dataran Merdeka",
-    address: "Jalan Raja, Kuala Lumpur",
-    city: "Kuala Lumpur",
-    state: "W.P. Kuala Lumpur",
-    lat: 3.1480,
-    lng: 101.6935,
-    category: "food",
-    tags: ["cooking", "nasi-lemak", "competition", "food-festival"],
-    imageUrl: "/images/nasi-lemak.jpg",
-    price: "Free",
-    isFree: true,
-    organizer: "Malaysian Food Council",
-    attendeeCount: 800,
-    maxCapacity: 2000,
-    sdgGoals: [8, 11],
-    status: "published",
-    source: "manual",
-    createdAt: "2026-01-15T06:00:00Z",
-    updatedAt: "2026-02-12T14:00:00Z",
-  },
-  {
-    id: "evt-004",
-    title: "Tech Startup Weekend Cyberjaya",
-    description: "54-hour hackathon where developers, designers, and business minds come together to build startups. Prizes worth RM 50,000!",
-    date: "2026-03-07",
-    time: "18:00",
-    endDate: "2026-03-09",
-    endTime: "21:00",
-    venue: "MDEC Building",
-    address: "Persiaran APEC, Cyberjaya",
-    city: "Cyberjaya",
-    state: "Selangor",
-    lat: 2.9213,
-    lng: 101.6559,
-    category: "tech",
-    tags: ["hackathon", "startup", "coding", "innovation"],
-    imageUrl: "/images/startup-weekend.jpg",
-    price: "RM 80",
-    isFree: false,
-    organizer: "Startup Grind MY",
-    attendeeCount: 150,
-    maxCapacity: 200,
-    sdgGoals: [4, 8],
-    status: "published",
-    source: "ai-extracted",
-    createdAt: "2026-02-05T07:00:00Z",
-    updatedAt: "2026-02-14T11:00:00Z",
-  },
-  {
-    id: "evt-005",
-    title: "Thaipusam Festival Batu Caves",
-    description: "Experience the vibrant Thaipusam celebration at Batu Caves. Witness the spectacular kavadi procession and immerse in Malaysian Indian culture.",
-    date: "2026-02-20",
-    time: "05:00",
-    endTime: "22:00",
-    venue: "Batu Caves Temple",
-    address: "Gombak, Selangor",
-    city: "Kuala Lumpur",
-    state: "Selangor",
-    lat: 3.2379,
-    lng: 101.6840,
-    category: "culture",
-    tags: ["thaipusam", "festival", "culture", "heritage", "temple"],
-    imageUrl: "/images/thaipusam.jpg",
-    price: "Free",
-    isFree: true,
-    organizer: "Batu Caves Temple Committee",
-    attendeeCount: 50000,
-    sdgGoals: [11],
-    status: "published",
-    source: "manual",
-    createdAt: "2026-01-10T04:00:00Z",
-    updatedAt: "2026-02-18T08:00:00Z",
-  },
-  {
-    id: "evt-006",
-    title: "JB Marathon 2026",
-    description: "Annual Johor Bahru marathon with 5K, 10K, half and full marathon categories. Route passes through iconic JB landmarks.",
-    date: "2026-04-05",
-    time: "05:30",
-    endTime: "12:00",
-    venue: "Dataran Bandaraya JB",
-    address: "Jalan Tun Abdul Razak, Johor Bahru",
-    city: "Johor Bahru",
-    state: "Johor",
-    lat: 1.4616,
-    lng: 103.7636,
-    category: "sports",
-    tags: ["marathon", "running", "fitness", "outdoor"],
-    imageUrl: "/images/jb-marathon.jpg",
-    price: "RM 60",
-    isFree: false,
-    organizer: "JB Running Club",
-    attendeeCount: 3200,
-    maxCapacity: 8000,
-    sdgGoals: [11],
-    status: "published",
-    source: "manual",
-    createdAt: "2026-01-25T09:00:00Z",
-    updatedAt: "2026-02-16T10:00:00Z",
-  },
-  {
-    id: "evt-007",
-    title: "Charity Iftar at Masjid Negara",
-    description: "Community iftar gathering open to all. Featuring traditional Malaysian dishes and cultural performances. Donations go to Tabung Asnaf.",
-    date: "2026-03-10",
-    time: "19:00",
-    endTime: "21:30",
-    venue: "Masjid Negara",
-    address: "Jalan Perdana, Kuala Lumpur",
-    city: "Kuala Lumpur",
-    state: "W.P. Kuala Lumpur",
-    lat: 3.1415,
-    lng: 101.6918,
-    category: "charity",
-    tags: ["ramadan", "iftar", "charity", "community", "culture"],
-    imageUrl: "/images/iftar.jpg",
-    price: "Free",
-    isFree: true,
-    organizer: "Yayasan Kebajikan MY",
-    attendeeCount: 500,
-    maxCapacity: 1000,
-    sdgGoals: [4, 11],
-    status: "published",
-    source: "ai-extracted",
-    createdAt: "2026-02-08T06:00:00Z",
-    updatedAt: "2026-02-17T07:00:00Z",
-  },
-  {
-    id: "evt-008",
-    title: "Ipoh White Coffee Festival",
-    description: "Celebrate Ipoh's world-famous white coffee! Barista competitions, coffee art, bean-to-cup workshops, and unlimited tasting sessions.",
-    date: "2026-03-22",
-    time: "08:00",
-    endDate: "2026-03-23",
-    endTime: "18:00",
-    venue: "Ipoh Railway Station",
-    address: "Jalan Panglima Bukit Gantang Wahab, Ipoh",
-    city: "Ipoh",
-    state: "Perak",
-    lat: 4.5950,
-    lng: 101.0870,
-    category: "food",
-    tags: ["coffee", "festival", "barista", "workshop"],
-    imageUrl: "/images/ipoh-coffee.jpg",
-    price: "RM 25",
-    isFree: false,
-    organizer: "Ipoh Coffee Society",
-    attendeeCount: 1200,
-    maxCapacity: 3000,
-    sdgGoals: [8, 11],
-    status: "published",
-    source: "manual",
-    createdAt: "2026-02-01T05:00:00Z",
-    updatedAt: "2026-02-15T12:00:00Z",
-  },
-  {
-    id: "evt-009",
-    title: "Sunrise Yoga at Tanjung Aru",
-    description: "Start your weekend with a rejuvenating sunrise yoga session on the beach. All levels welcome. Mats provided. Ends with a healthy breakfast.",
-    date: "2026-02-28",
-    time: "06:00",
-    endTime: "08:30",
-    venue: "Tanjung Aru Beach",
-    address: "Tanjung Aru, Kota Kinabalu",
-    city: "Kota Kinabalu",
-    state: "Sabah",
-    lat: 5.9551,
-    lng: 116.0459,
-    category: "wellness",
-    tags: ["yoga", "beach", "sunrise", "wellness", "outdoor"],
-    imageUrl: "/images/yoga-kk.jpg",
-    price: "RM 30",
-    isFree: false,
-    organizer: "KK Wellness Collective",
-    attendeeCount: 35,
-    maxCapacity: 50,
-    sdgGoals: [11],
-    status: "published",
-    source: "ai-extracted",
-    createdAt: "2026-02-10T03:00:00Z",
-    updatedAt: "2026-02-17T06:00:00Z",
-  },
-  {
-    id: "evt-010",
-    title: "Kuching Cat Festival",
-    description: "The quirkiest festival in Sarawak! Cat costume parade, cat cafe pop-ups, feline art exhibition, and adoption drives. Fun for the whole family!",
-    date: "2026-04-12",
-    time: "10:00",
-    endDate: "2026-04-13",
-    endTime: "20:00",
-    venue: "Waterfront Promenade",
-    address: "Main Bazaar, Kuching",
-    city: "Kuching",
-    state: "Sarawak",
-    lat: 1.5580,
-    lng: 110.3492,
-    category: "family",
-    tags: ["cats", "festival", "family", "fun", "adoption"],
-    imageUrl: "/images/cat-fest.jpg",
-    price: "Free",
-    isFree: true,
-    organizer: "Kuching City Council",
-    attendeeCount: 4500,
-    maxCapacity: 10000,
-    sdgGoals: [11],
-    status: "published",
-    source: "manual",
-    createdAt: "2026-02-03T08:00:00Z",
-    updatedAt: "2026-02-16T09:00:00Z",
-  },
-];
+const geminiKey = process.env.GOOGLE_AI_API_KEY;
+if (!geminiKey) {
+  console.error("Missing GOOGLE_AI_API_KEY in .env.local");
+  process.exit(1);
+}
+const genAI = new GoogleGenerativeAI(geminiKey);
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-async function seed() {
-  console.log("Seeding Firestore with events...\n");
+const PAGES_TO_SCRAPE = parseInt(process.argv[2] || "3", 10);
+const BATCH_SIZE = 5; // concurrent detail-page fetches
+const HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
-  let count = 0;
-  for (const event of SEED_EVENTS) {
-    const { id, ...data } = event;
-    try {
-      const ref = await addDoc(collection(db, "events"), data);
-      console.log(`  Added: ${event.title} -> ${ref.id}`);
-      count++;
-    } catch (err) {
-      console.error(`  Failed: ${event.title}`, err.message);
+// ── Malaysian city coordinates ──────────────────────────────
+const MY_CITY_COORDS = {
+  "kuala lumpur": { lat: 3.139, lng: 101.6869, state: "W.P. Kuala Lumpur" },
+  "petaling jaya": { lat: 3.1073, lng: 101.6067, state: "Selangor" },
+  "george town": { lat: 5.4164, lng: 100.3327, state: "Penang" },
+  "penang": { lat: 5.4164, lng: 100.3327, state: "Penang" },
+  "johor bahru": { lat: 1.4927, lng: 103.7414, state: "Johor" },
+  "ipoh": { lat: 4.5975, lng: 101.0901, state: "Perak" },
+  "melaka": { lat: 2.1896, lng: 102.2501, state: "Melaka" },
+  "shah alam": { lat: 3.0733, lng: 101.5185, state: "Selangor" },
+  "kota kinabalu": { lat: 5.9804, lng: 116.0735, state: "Sabah" },
+  "kuching": { lat: 1.5535, lng: 110.3593, state: "Sarawak" },
+  "subang jaya": { lat: 3.0565, lng: 101.5851, state: "Selangor" },
+  "bangsar": { lat: 3.1283, lng: 101.6717, state: "W.P. Kuala Lumpur" },
+  "mont kiara": { lat: 3.171, lng: 101.651, state: "W.P. Kuala Lumpur" },
+  "bukit bintang": { lat: 3.1466, lng: 101.7108, state: "W.P. Kuala Lumpur" },
+  "klcc": { lat: 3.1588, lng: 101.7119, state: "W.P. Kuala Lumpur" },
+  "damansara": { lat: 3.1379, lng: 101.6157, state: "Selangor" },
+  "cyberjaya": { lat: 2.9213, lng: 101.6559, state: "Selangor" },
+};
+
+function resolveCityCoords(text) {
+  const lower = (text || "").toLowerCase();
+  for (const [name, data] of Object.entries(MY_CITY_COORDS)) {
+    if (lower.includes(name)) {
+      const display = name.split(" ").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+      return { city: display, ...data };
+    }
+  }
+  return { city: "Kuala Lumpur", lat: 3.139, lng: 101.6869, state: "W.P. Kuala Lumpur" };
+}
+
+// ── Step 1: Scrape listing pages from WhatsOnKL ─────────────
+function parseListingPage(html) {
+  const events = [];
+  const seen = new Set();
+
+  // Match headings with links
+  const headingRegex =
+    /<h[12][^>]*>\s*<a[^>]*href=["'](https?:\/\/whatsonkl\.com\/[^"']+)["'][^>]*>\s*([\s\S]*?)\s*<\/a>\s*<\/h[12]>/gi;
+  let match;
+  while ((match = headingRegex.exec(html)) !== null) {
+    const url = match[1];
+    const title = match[2].replace(/<[^>]+>/g, "").trim();
+    if (!title || seen.has(url)) continue;
+    if (url.includes("/about") || url.includes("/pricing") || url.includes("/contact")) continue;
+    seen.add(url);
+    events.push({ title, url });
+  }
+
+  // Fallback: match links to event slugs
+  if (events.length === 0) {
+    const linkRegex =
+      /href=["'](https?:\/\/whatsonkl\.com\/(?![#?])[^"']+)["'][^>]*>\s*([^<]+)/gi;
+    let linkMatch;
+    while ((linkMatch = linkRegex.exec(html)) !== null) {
+      const url = linkMatch[1];
+      const title = linkMatch[2].trim();
+      if (!title || title.length < 3 || seen.has(url)) continue;
+      if (/\/(about|pricing|contact|wp-content)/.test(url)) continue;
+      seen.add(url);
+      events.push({ title, url });
     }
   }
 
-  console.log(`\nDone! Seeded ${count} events into Firestore.`);
+  return events;
+}
+
+async function fetchListingPage(page) {
+  const url = page > 1
+    ? `https://whatsonkl.com/?query-33e9b2f4=${page}`
+    : "https://whatsonkl.com/";
+  console.log(`  Fetching listing page ${page}: ${url}`);
+  const res = await fetch(url, { headers: HEADERS });
+  if (!res.ok) throw new Error(`Listing page ${page} returned ${res.status}`);
+  return res.text();
+}
+
+// ── Step 2: Scrape detail pages ─────────────────────────────
+async function scrapeDetailPage(url) {
+  try {
+    const res = await fetch(url, { headers: HEADERS });
+    if (!res.ok) return { fullText: "", imageUrl: null };
+    const html = await res.text();
+
+    // Extract main content
+    const contentMatch =
+      html.match(/<article[^>]*>([\s\S]*?)<\/article>/i) ||
+      html.match(/<main[^>]*>([\s\S]*?)<\/main>/i) ||
+      html.match(/<div[^>]*class="[^"]*(?:entry-content|post-content|content)[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+
+    let fullText = "";
+    if (contentMatch) {
+      fullText = contentMatch[1]
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&[a-z]+;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    // Extract og:image
+    const imgMatch = html.match(
+      /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i
+    );
+    const imageUrl = imgMatch ? imgMatch[1] : null;
+
+    return { fullText: fullText.slice(0, 3000), imageUrl };
+  } catch {
+    return { fullText: "", imageUrl: null };
+  }
+}
+
+// ── Step 3: Use Gemini to extract structured event data ─────
+const GEMINI_PROMPT = `You are an expert event data extractor for Malaysian events.
+Given raw scraped text from an event page, extract a structured JSON object.
+
+Return ONLY a valid JSON object (no markdown, no backticks) with these fields:
+{
+  "title": "Event title",
+  "description": "2-3 sentence description",
+  "date": "YYYY-MM-DD (best guess from context, use 2026 if year unclear)",
+  "time": "HH:MM in 24h format (default 20:00 if unknown)",
+  "endTime": "HH:MM or null",
+  "venue": "Venue name",
+  "address": "Street address if available",
+  "city": "Malaysian city",
+  "state": "Malaysian state",
+  "category": "One of: music, arts, food, sports, tech, community, education, business, wellness, culture, charity, nightlife, family, outdoor",
+  "tags": ["relevant", "tags"],
+  "price": "e.g. 'RM 50' or 'Free'",
+  "isFree": true/false,
+  "organizer": "Organizer name or 'WhatsOnKL'",
+  "website": "URL or null",
+  "sdgGoals": [relevant SDG numbers from 4=Education, 8=Economic Growth, 11=Sustainable Communities],
+  "confidence": 0.0 to 1.0
+}
+
+If information is missing, make reasonable inferences for a Malaysian event. Default city to "Kuala Lumpur" if unclear.`;
+
+async function extractWithGemini(title, rawText, sourceUrl) {
+  try {
+    const prompt = `${GEMINI_PROMPT}\n\nEvent title: ${title}\nSource URL: ${sourceUrl}\n\nRaw scraped text:\n${rawText.slice(0, 2500)}`;
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+
+    // Strip markdown code fences if present
+    const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.warn(`    Gemini extraction failed for "${title}": ${err.message}`);
+    return null;
+  }
+}
+
+// ── Step 4: Build HappeningEvent and save to Firestore ──────
+function buildEvent(extracted, imageUrl, sourceUrl, index) {
+  const now = new Date().toISOString();
+  const cityInfo = resolveCityCoords(
+    `${extracted.city || ""} ${extracted.venue || ""} ${extracted.address || ""}`
+  );
+
+  return {
+    title: extracted.title || "Untitled Event",
+    description: extracted.description || "",
+    date: extracted.date || now.slice(0, 10),
+    time: extracted.time || "20:00",
+    endTime: extracted.endTime || null,
+    venue: extracted.venue || "See website",
+    address: extracted.address || cityInfo.city,
+    city: extracted.city || cityInfo.city,
+    state: extracted.state || cityInfo.state,
+    lat: cityInfo.lat,
+    lng: cityInfo.lng,
+    category: extracted.category || "community",
+    tags: [...(extracted.tags || []), "scraped", "whatsonkl"],
+    imageUrl: imageUrl || "/placeholder-event.jpg",
+    price: extracted.price || "See website",
+    isFree: extracted.isFree ?? true,
+    organizer: extracted.organizer || "WhatsOnKL",
+    website: extracted.website || sourceUrl,
+    attendeeCount: 0,
+    sdgGoals: extracted.sdgGoals || [11],
+    status: "published",
+    source: "web",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+// ── Main ────────────────────────────────────────────────────
+async function seed() {
+  console.log(`\n🕷️  WhatsOnKL Scraper + Gemini Enrichment`);
+  console.log(`   Scraping ${PAGES_TO_SCRAPE} page(s)...\n`);
+
+  // 1. Scrape listing pages
+  const allListings = [];
+  for (let p = 1; p <= PAGES_TO_SCRAPE; p++) {
+    try {
+      const html = await fetchListingPage(p);
+      const listings = parseListingPage(html);
+      console.log(`    Found ${listings.length} events on page ${p}`);
+      allListings.push(...listings);
+    } catch (err) {
+      console.error(`    Page ${p} failed: ${err.message}`);
+    }
+    // Be polite — wait between pages
+    if (p < PAGES_TO_SCRAPE) await sleep(1000);
+  }
+
+  console.log(`\n  Total listings found: ${allListings.length}\n`);
+  if (allListings.length === 0) {
+    console.log("  No events found. Exiting.");
+    process.exit(0);
+  }
+
+  // 2. Fetch detail pages in batches
+  console.log("  Fetching detail pages...");
+  const detailData = [];
+  for (let i = 0; i < allListings.length; i += BATCH_SIZE) {
+    const batch = allListings.slice(i, i + BATCH_SIZE);
+    const details = await Promise.all(batch.map((ev) => scrapeDetailPage(ev.url)));
+    detailData.push(...details);
+    if (i + BATCH_SIZE < allListings.length) await sleep(1000);
+  }
+  console.log(`    Fetched ${detailData.length} detail pages\n`);
+
+  // 3. Extract with Gemini and seed Firestore
+  console.log("  Extracting with Gemini & seeding Firestore...\n");
+  let seeded = 0;
+  let failed = 0;
+
+  for (let i = 0; i < allListings.length; i++) {
+    const listing = allListings[i];
+    const detail = detailData[i];
+    const rawText = detail.fullText || listing.title;
+
+    // Skip if no meaningful content
+    if (rawText.length < 20) {
+      console.log(`    Skip (too short): ${listing.title}`);
+      failed++;
+      continue;
+    }
+
+    // Extract structured data with Gemini
+    const extracted = await extractWithGemini(listing.title, rawText, listing.url);
+    if (!extracted) {
+      failed++;
+      continue;
+    }
+
+    // Build event document and save
+    const event = buildEvent(extracted, detail.imageUrl, listing.url, i);
+    try {
+      const ref = await addDoc(collection(db, "events"), event);
+      console.log(`    ✓ ${event.title} → ${ref.id}`);
+      seeded++;
+    } catch (err) {
+      console.error(`    ✗ ${event.title}: ${err.message}`);
+      failed++;
+    }
+
+    // Rate-limit Gemini calls
+    if (i < allListings.length - 1) await sleep(500);
+  }
+
+  console.log(`\n  Done! Seeded: ${seeded} | Failed: ${failed} | Total: ${allListings.length}`);
   process.exit(0);
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 seed();
