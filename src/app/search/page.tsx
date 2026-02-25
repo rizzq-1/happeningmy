@@ -289,7 +289,7 @@ function SearchContent() {
                     <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-blue-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow">
                       <Globe size={10} /> Web
                     </div>
-                    <EventCard event={event} externalUrl={event.website || undefined} />
+                    <EventCard event={event} />
                     {event.website && (
                       <a
                         href={event.website}

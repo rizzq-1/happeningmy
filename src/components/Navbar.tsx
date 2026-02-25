@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { isAdminUser } from "@/lib/constants";
+import AuthModal from "@/components/AuthModal";
 import {
   MapPin,
   Search,
@@ -15,6 +16,7 @@ import {
   LogIn,
   LogOut,
   User,
+  UserPlus,
 } from "lucide-react";
 
 const BASE_NAV_LINKS = [
@@ -27,12 +29,14 @@ const BASE_NAV_LINKS = [
 const ADMIN_NAV_LINK = { href: "/dashboard", label: "Impact", icon: BarChart3 };
 
 export default function Navbar() {
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authModal, setAuthModal] = useState<false | "signin" | "signup">(false);
   const isAdmin = isAdminUser(user?.email);
   const NAV_LINKS = isAdmin ? [...BASE_NAV_LINKS, ADMIN_NAV_LINK] : BASE_NAV_LINKS;
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
@@ -87,13 +91,22 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={signInWithGoogle}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm shadow-blue-200 hover:shadow-blue-300 transition-all"
-              >
-                <LogIn size={14} />
-                Sign In
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAuthModal("signin")}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                >
+                  <LogIn size={14} />
+                  Sign In
+                </button>
+                <button
+                  onClick={() => setAuthModal("signup")}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm shadow-blue-200 hover:shadow-blue-300 transition-all"
+                >
+                  <UserPlus size={14} />
+                  Sign Up
+                </button>
+              </div>
             )}
           </div>
 
@@ -122,7 +135,7 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <div className="border-t border-gray-100 pt-3 mt-2">
+            <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
               {user ? (
                 <button
                   onClick={() => {
@@ -135,21 +148,41 @@ export default function Navbar() {
                   Sign Out
                 </button>
               ) : (
-                <button
-                  onClick={() => {
-                    signInWithGoogle();
-                    setMobileOpen(false);
-                  }}
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg w-full transition-all"
-                >
-                  <LogIn size={18} />
-                  Sign In with Google
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      setAuthModal("signin");
+                      setMobileOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg w-full transition-all"
+                  >
+                    <LogIn size={18} />
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthModal("signup");
+                      setMobileOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg w-full transition-all"
+                  >
+                    <UserPlus size={18} />
+                    Sign Up
+                  </button>
+                </>
               )}
             </div>
           </nav>
         </div>
       )}
     </header>
+
+    {/* Auth Modal */}
+    <AuthModal
+      open={!!authModal}
+      onClose={() => setAuthModal(false)}
+      defaultTab={authModal || "signin"}
+    />
+    </>
   );
 }

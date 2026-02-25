@@ -39,11 +39,6 @@ export default function Footer() {
                   Snapshot-to-Event
                 </Link>
               </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-white transition-colors">
-                  Impact Dashboard
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -74,7 +69,6 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>Gemini 1.5 Flash</li>
-              <li>Vertex AI</li>
               <li>Google Maps Platform</li>
               <li>Firebase</li>
               <li>Google Cloud Run</li>
@@ -84,7 +78,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs">
-            © {new Date().getFullYear()} HappeningMY. Built for Malaysia 🇲🇾
+            © {new Date().getFullYear()} HappeningMY. Built for Malaysia 🇲🇾. Made by PPFC for KitaHack 2026.
           </p>
           <div className="flex items-center gap-4 text-xs">
             <span className="flex items-center gap-1">

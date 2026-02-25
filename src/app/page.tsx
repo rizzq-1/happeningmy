@@ -104,7 +104,7 @@ export default function HomePage() {
                       href={`/events/${event.id}`}
                       className="flex items-start gap-3 p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 hover:bg-white/20 transition-all group"
                     >
-                      {event.imageUrl && !event.imageUrl.startsWith("/images/") ? (
+                      {event.imageUrl && (event.imageUrl.startsWith("http://") || event.imageUrl.startsWith("https://") || event.imageUrl.startsWith("data:")) ? (
                         <img
                           src={event.imageUrl}
                           alt={event.title}
@@ -115,7 +115,7 @@ export default function HomePage() {
                           className="w-12 h-12 rounded-lg flex items-center justify-center text-xl shrink-0"
                           style={{ backgroundColor: cat.color + "30" }}
                         >
-                          {cat.emoji}
+                          {event.imageUrl && !event.imageUrl.startsWith("/") ? event.imageUrl : cat.emoji}
                         </div>
                       )}
                       <div className="min-w-0 flex-1">

@@ -565,7 +565,7 @@ export default function DashboardPage() {
                     key={ev.id}
                     className="flex items-center gap-3 bg-white rounded-xl p-3 border border-gray-100 hover:border-blue-200 transition-colors"
                   >
-                    {ev.imageUrl && !ev.imageUrl.startsWith("/images/") && ev.imageUrl !== "/placeholder-event.jpg" ? (
+                    {ev.imageUrl && (ev.imageUrl.startsWith("http://") || ev.imageUrl.startsWith("https://") || ev.imageUrl.startsWith("data:")) ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={ev.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                     ) : (
@@ -573,7 +573,7 @@ export default function DashboardPage() {
                         className="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
                         style={{ backgroundColor: cat.color + "18" }}
                       >
-                        {cat.emoji}
+                        {ev.imageUrl && !ev.imageUrl.startsWith("/") ? ev.imageUrl : cat.emoji}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
