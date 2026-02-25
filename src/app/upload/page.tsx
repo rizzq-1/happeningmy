@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles, Upload as UploadIcon, CheckCircle2, LogIn, ShieldCheck, Clock } from "lucide-react";
 import PosterUploader from "@/components/PosterUploader";
-import { uploadPoster } from "@/lib/events";
+import { uploadPoster, createEvent } from "@/lib/events";
 import { GeminiExtractionResult } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 
@@ -14,6 +14,7 @@ export default function UploadPage() {
   const [posterFile, setPosterFile] = useState<File | null>(null);
   const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
 
   const handleExtracted = (result: GeminiExtractionResult, imgUrl: string, file: File) => {
     setExtracted(result);
@@ -26,6 +27,7 @@ export default function UploadPage() {
     if (!extracted) return;
 
     setPublishing(true);
+    setPublishError("");
     try {
       // Upload poster to Firebase Storage for a persistent URL
       let finalImageUrl = imageUrl || "";
@@ -38,33 +40,34 @@ export default function UploadPage() {
               setTimeout(() => reject(new Error("Storage upload timed out")), 15000)
             ),
           ]);
+          console.log("Storage upload succeeded:", finalImageUrl);
         } catch (err) {
           console.error("Storage upload failed, using local preview:", err);
+          // Continue with local preview URL — event can still be saved
         }
       }
 
-      const res = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...extracted,
-          imageUrl: finalImageUrl,
-          lat: 3.139 + (Math.random() - 0.5) * 0.05,
-          lng: 101.6869 + (Math.random() - 0.5) * 0.05,
-          attendeeCount: 0,
-          status: "pending",
-          source: "ai-extracted",
-          organizerUid: user?.uid || "",
-          organizerEmail: user?.email || "",
-          organizerName: user?.displayName || "",
-        }),
-      });
+      const payload = {
+        ...extracted,
+        imageUrl: finalImageUrl,
+        lat: 3.139 + (Math.random() - 0.5) * 0.05,
+        lng: 101.6869 + (Math.random() - 0.5) * 0.05,
+        attendeeCount: 0,
+        status: "pending" as const,
+        source: "ai-extracted" as const,
+        organizerUid: user?.uid || "",
+        organizerEmail: user?.email || "",
+        organizerName: user?.displayName || "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-      if (res.ok) {
-        setPublished(true);
-      }
+      // Write directly to Firestore from the client (where user is authenticated)
+      await createEvent(payload);
+      setPublished(true);
     } catch (error) {
       console.error("Publish error:", error);
+      setPublishError(error instanceof Error ? error.message : "Network error. Please try again.");
     } finally {
       setPublishing(false);
     }
@@ -184,6 +187,12 @@ export default function UploadPage() {
               </>
             )}
           </button>
+          {publishError && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <p className="text-sm text-red-700 font-medium">Failed to publish</p>
+              <p className="text-xs text-red-600 mt-1">{publishError}</p>
+            </div>
+          )}
         </div>
       )}
 
