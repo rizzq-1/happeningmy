@@ -127,7 +127,7 @@ export async function deleteEvent(id: string): Promise<void> {
 
 // ── Upload image to Firebase Storage ────────────────────────
 export async function uploadEventImage(file: File, eventId: string): Promise<string> {
-  const storageRef = ref(storage, `events/${eventId}/${file.name}`);
+  const storageRef = ref(storage, `event_images/${eventId}_${file.name}`);
   const snapshot = await uploadBytes(storageRef, file);
   return getDownloadURL(snapshot.ref);
 }
@@ -135,7 +135,7 @@ export async function uploadEventImage(file: File, eventId: string): Promise<str
 // ── Upload poster for AI extraction ─────────────────────────
 export async function uploadPoster(file: File): Promise<string> {
   const timestamp = Date.now();
-  const storageRef = ref(storage, `posters/${timestamp}_${file.name}`);
+  const storageRef = ref(storage, `event_images/${timestamp}_${file.name}`);
   const snapshot = await uploadBytes(storageRef, file);
   return getDownloadURL(snapshot.ref);
 }
