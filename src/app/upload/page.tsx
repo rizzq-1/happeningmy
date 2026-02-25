@@ -31,7 +31,13 @@ export default function UploadPage() {
       let finalImageUrl = imageUrl || "";
       if (posterFile) {
         try {
-          finalImageUrl = await uploadPoster(posterFile);
+          // Race against a timeout to prevent hanging if Storage is misconfigured
+          finalImageUrl = await Promise.race([
+            uploadPoster(posterFile),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Storage upload timed out")), 15000)
+            ),
+          ]);
         } catch (err) {
           console.error("Storage upload failed, using local preview:", err);
         }
