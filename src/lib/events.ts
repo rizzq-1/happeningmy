@@ -92,8 +92,12 @@ export async function getEventById(id: string): Promise<HappeningEvent | null> {
 // ── Create a new event ──────────────────────────────────────
 export async function createEvent(event: Omit<HappeningEvent, "id">): Promise<string> {
   try {
+    // Strip undefined values — Firestore rejects them
+    const clean = Object.fromEntries(
+      Object.entries(event).filter(([, v]) => v !== undefined)
+    );
     const docRef = await addDoc(collection(db, EVENTS_COLLECTION), {
-      ...event,
+      ...clean,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
