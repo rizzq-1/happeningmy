@@ -15,6 +15,7 @@ import {
   Heart,
   ExternalLink,
   Sparkles,
+  X,
 } from "lucide-react";
 import { SEED_EVENTS, CATEGORY_CONFIG } from "@/lib/constants";
 import { getEventById } from "@/lib/events";
@@ -35,6 +36,7 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
   const [loading, setLoading] = useState(true);
   const { isSaved, toggleSave } = useSavedEvents();
   const [shareToast, setShareToast] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     // Try Firestore first
@@ -126,41 +128,49 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
           {/* Hero image area */}
-          <div className="relative h-64 md:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex items-center justify-center">
-            {event.imageUrl && (event.imageUrl.startsWith("http://") || event.imageUrl.startsWith("https://") || event.imageUrl.startsWith("data:")) ? (
-              <img
-                src={event.imageUrl}
-                alt={event.title}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-7xl">
-                {event.imageUrl && !event.imageUrl.startsWith("/") ? event.imageUrl : cat.emoji}
-              </span>
-            )}
-            <div
-              className="absolute top-4 left-4 px-3 py-1.5 rounded-lg text-white text-sm font-semibold"
-              style={{ backgroundColor: cat.color }}
-            >
-              {cat.emoji} {cat.label}
-            </div>
-            {event.source === "ai-extracted" && (
-              <div className="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1">
-                <Sparkles size={12} /> AI Extracted
+          {(() => {
+            const hasRealImage = event.imageUrl && (event.imageUrl.startsWith("http://") || event.imageUrl.startsWith("https://") || event.imageUrl.startsWith("data:"));
+            return (
+              <div
+                className={`relative h-64 md:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl overflow-hidden flex items-center justify-center${hasRealImage ? " cursor-zoom-in" : ""}`}
+                onClick={() => { if (hasRealImage) setLightboxOpen(true); }}
+              >
+                {hasRealImage ? (
+                  <img
+                    src={event.imageUrl}
+                    alt={event.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-7xl">
+                    {event.imageUrl && !event.imageUrl.startsWith("/") ? event.imageUrl : cat.emoji}
+                  </span>
+                )}
+                <div
+                  className="absolute top-4 left-4 px-3 py-1.5 rounded-lg text-white text-sm font-semibold"
+                  style={{ backgroundColor: cat.color }}
+                >
+                  {cat.emoji} {cat.label}
+                </div>
+                {event.source === "ai-extracted" && (
+                  <div className="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1">
+                    <Sparkles size={12} /> AI Extracted
+                  </div>
+                )}
+                <div className="absolute bottom-4 right-4">
+                  {event.isFree ? (
+                    <span className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-bold">
+                      FREE
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1.5 bg-white/90 backdrop-blur text-gray-800 rounded-lg text-sm font-bold">
+                      {event.price}
+                    </span>
+                  )}
+                </div>
               </div>
-            )}
-            <div className="absolute bottom-4 right-4">
-              {event.isFree ? (
-                <span className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-bold">
-                  FREE
-                </span>
-              ) : (
-                <span className="px-3 py-1.5 bg-white/90 backdrop-blur text-gray-800 rounded-lg text-sm font-bold">
-                  {event.price}
-                </span>
-              )}
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Title & Description */}
           <div>
@@ -276,11 +286,10 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => toggleSave(event.id)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border rounded-xl text-sm transition-all ${
-                    isSaved(event.id)
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border rounded-xl text-sm transition-all ${isSaved(event.id)
                       ? "bg-pink-50 border-pink-200 text-pink-600"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <Heart size={14} className={isSaved(event.id) ? "fill-pink-500" : ""} />
                   {isSaved(event.id) ? "Saved" : "Save"}
@@ -356,6 +365,33 @@ export default function EventDetailPage({ params }: EventDetailPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Image Lightbox */}
+      {lightboxOpen && event.imageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
+          onClick={() => setLightboxOpen(false)}
+          onKeyDown={(e) => { if (e.key === "Escape") setLightboxOpen(false); }}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={0}
+          ref={(el) => el?.focus()}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }}
+            className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            aria-label="Close"
+          >
+            <X size={22} />
+          </button>
+          <img
+            src={event.imageUrl}
+            alt={event.title}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl animate-[scaleIn_0.2s_ease-out]"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
