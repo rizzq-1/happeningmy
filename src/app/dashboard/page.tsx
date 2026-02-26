@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { BarChart3, TrendingUp, Target, Sparkles, Download, Globe, Loader2, CheckCircle, AlertCircle, ShieldCheck, X, Check, Clock, Pencil, Save, Tag, Trash2, CalendarX2 } from "lucide-react";
 import { SDGCard, StatsOverview } from "@/components/Dashboard";
 import { SDG_METRICS, MOCK_DASHBOARD_STATS, SEED_EVENTS, MOCK_HEATMAP_DATA, CATEGORY_CONFIG } from "@/lib/constants";
-import { getEvents } from "@/lib/events";
+import { getEvents, updateEvent, deleteEvent } from "@/lib/events";
 import EventMap from "@/components/EventMap";
 import { HappeningEvent } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
@@ -80,8 +80,7 @@ export default function DashboardPage() {
   async function handleApprove(eventId: string) {
     setReviewMessage(null);
     try {
-      const res = await fetch(`/api/events/${eventId}/approve`, { method: "PATCH" });
-      if (!res.ok) throw new Error("Failed to approve");
+      await updateEvent(eventId, { status: "published" });
       setReviewMessage({ type: "success", text: "Event approved and published!" });
       setPendingEvents((prev) => prev.filter((e) => e.id !== eventId));
       // Refresh published events
@@ -94,8 +93,7 @@ export default function DashboardPage() {
   async function handleReject(eventId: string) {
     setReviewMessage(null);
     try {
-      const res = await fetch(`/api/events/${eventId}/approve`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to reject");
+      await deleteEvent(eventId);
       setReviewMessage({ type: "success", text: "Event rejected and removed." });
       setPendingEvents((prev) => prev.filter((e) => e.id !== eventId));
     } catch (err) {
@@ -106,8 +104,7 @@ export default function DashboardPage() {
   async function handleDeleteEvent(eventId: string) {
     if (!confirm("Are you sure you want to delete this event? This cannot be undone.")) return;
     try {
-      const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
+      await deleteEvent(eventId);
       setEvents((prev) => prev.filter((e) => e.id !== eventId));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete event");
@@ -125,8 +122,8 @@ export default function DashboardPage() {
     let deleted = 0;
     for (const ev of pastEvents) {
       try {
-        const res = await fetch(`/api/events/${ev.id}`, { method: "DELETE" });
-        if (res.ok) deleted++;
+        await deleteEvent(ev.id);
+        deleted++;
       } catch { /* skip */ }
     }
     setEvents((prev) => prev.filter((e) => (e.endDate || e.date) >= today));
@@ -159,26 +156,18 @@ export default function DashboardPage() {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      const res = await fetch(`/api/events/${editingEvent.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category: editForm.category,
-          tags,
-          title: editForm.title,
-          venue: editForm.venue,
-          city: editForm.city,
-          date: editForm.date,
-          time: editForm.time,
-          price: editForm.price,
-          isFree: editForm.isFree,
-          description: editForm.description,
-        }),
+      await updateEvent(editingEvent.id, {
+        category: editForm.category as HappeningEvent["category"],
+        tags,
+        title: editForm.title,
+        venue: editForm.venue,
+        city: editForm.city,
+        date: editForm.date,
+        time: editForm.time,
+        price: editForm.price,
+        isFree: editForm.isFree,
+        description: editForm.description,
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update");
-      }
       setEditMessage({ type: "success", text: "Event updated!" });
       // Refresh events list
       setEvents((prev) =>
