@@ -78,19 +78,15 @@ export default function UploadPage() {
     setPublishError("");
     try {
       // Upload poster to Firebase Storage for a persistent URL
-      let finalImageUrl = imageUrl || "";
+      let finalImageUrl = "";
       if (posterFile) {
-        try {
-          finalImageUrl = await Promise.race([
-            uploadPoster(posterFile),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Storage upload timed out")), 15000)
-            ),
-          ]);
-          console.log("Storage upload succeeded:", finalImageUrl);
-        } catch (err) {
-          console.error("Storage upload failed, using local preview:", err);
-        }
+        finalImageUrl = await Promise.race([
+          uploadPoster(posterFile),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Storage upload timed out — please try again")), 15000)
+          ),
+        ]);
+        console.log("Storage upload succeeded:", finalImageUrl);
       }
 
       const tags = editForm.tags.split(",").map((t) => t.trim()).filter(Boolean);
