@@ -67,7 +67,7 @@ export default function DashboardPage() {
   async function fetchPendingEvents() {
     setPendingLoading(true);
     try {
-      const pending = await getEvents({ status: "pending" });
+      const pending = await getEvents({ status: "pending", includePast: true });
       // Filter out seed events (they don't have pending status)
       setPendingEvents(pending.filter((e) => e.status === "pending"));
     } catch {
