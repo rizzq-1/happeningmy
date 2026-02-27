@@ -47,21 +47,6 @@ HappeningMY is built entirely on the Google ecosystem. Here's how each technolog
 | **Firebase Authentication** | Google One-Tap sign-in via `signInWithPopup`. Admin roles are enforced by email allowlist. Only authenticated users can upload posters; only admins can access the dashboard. |
 | **Cloud Storage** | Uploaded poster images are stored in Firebase Storage and served via persistent URLs for event cards. |
 
-### Architecture Diagram
-
-```
-User uploads poster
-       │
-       ▼
-Firebase Storage ──► Gemini 2.0 Flash (Vision) ──► Structured JSON
-                                                        │
-                                                        ▼
-                                                   Cloud Firestore
-                                                        │
-                              ┌──────────────────────────┼──────────────────────────┐
-                              ▼                          ▼                          ▼
-                     Google Maps (Markers)      Search (Gemini + Grounding)   SDG Dashboard
-```
 
 ---
 
@@ -123,20 +108,6 @@ HappeningMY tracks contributions toward three UN Sustainable Development Goals:
   - Geocoding API
 - A Firebase project with Firestore, Auth, and Storage enabled
 
-### Environment Variables
-
-Create a `.env.local` file in the project root:
-
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
-GOOGLE_AI_API_KEY=your_gemini_api_key
-```
 
 ### Install & Run
 
@@ -145,44 +116,4 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the app.
-
----
-
-## Project Structure
-
-```
-src/
-├── app/
-│   ├── page.tsx              # Landing page with map & event cards
-│   ├── search/               # AI-powered semantic search
-│   ├── upload/               # Poster upload + Gemini extraction
-│   ├── dashboard/            # Admin dashboard (SDG, imports, moderation)
-│   ├── events/[id]/          # Event detail pages
-│   ├── saved/                # User's saved/bookmarked events
-│   └── api/
-│       ├── extract/          # Gemini poster → JSON extraction
-│       ├── search/           # Gemini + Google Search grounding
-│       ├── gemini-import/    # Gemini web event discovery & import
-│       ├── events/           # CRUD + approval endpoints
-│       └── eventbrite/       # Eventbrite API integration
-├── components/
-│   ├── EventCard.tsx         # Event display card with emoji fallbacks
-│   ├── EventMap.tsx          # Google Maps with Advanced Markers & heatmaps
-│   ├── Dashboard.tsx         # SDG cards & stats overview
-│   ├── PosterUploader.tsx    # Drag-and-drop poster upload
-│   ├── SearchBar.tsx         # Filter bar (category, city, date, free)
-│   ├── Navbar.tsx            # Navigation with auth state
-│   └── Footer.tsx            # Site footer
-└── lib/
-    ├── firebase.ts           # Firebase app initialization
-    ├── auth-context.tsx       # React auth context (Google sign-in)
-    ├── events.ts             # Firestore event CRUD helpers
-    ├── types.ts              # TypeScript type definitions
-    ├── constants.ts          # Categories, SDG metrics, seed data
-    └── useSavedEvents.ts     # Saved events hook (localStorage)
-```
-
----
-
-*Built for the Google Solutions Challenge 2026* 🇲🇾
+Open [http://localhost:3000](http://localhost:3000) to see the app. 
