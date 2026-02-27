@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { collection, addDoc, query, where, getDocs, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export const maxDuration = 60;
 
@@ -223,15 +223,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ imported: 0, skipped: 0, message: "No events to import." });
     }
 
-    // Check for duplicates by title
+    // Check for duplicates by title using Admin SDK
     const titles = rawEvents.map((e) => e.title);
     const existingTitles = new Set<string>();
 
     for (let i = 0; i < titles.length; i += 10) {
       const batch = titles.slice(i, i + 10);
-      const snap = await getDocs(
-        query(collection(db, EVENTS_COLLECTION), where("title", "in", batch))
-      );
+      const snap = await adminDb
+        .collection(EVENTS_COLLECTION)
+        .where("title", "in", batch)
+        .get();
       snap.docs.forEach((d) => {
         const data = d.data();
         if (data.title) existingTitles.add(data.title);
@@ -249,7 +250,7 @@ export async function POST(request: NextRequest) {
 
       const cityInfo = resolveCityCoords(`${raw.city || ""} ${raw.venue || ""} ${raw.address || ""}`);
       const geo = await geocodeVenue(raw.venue || "", raw.city || cityInfo.city, raw.address);
-      const now = Timestamp.now();
+      const now = FieldValue.serverTimestamp();
 
       const event = {
         title: raw.title || "Untitled Event",
@@ -278,7 +279,7 @@ export async function POST(request: NextRequest) {
         updatedAt: now,
       };
 
-      await addDoc(collection(db, EVENTS_COLLECTION), event);
+      await adminDb.collection(EVENTS_COLLECTION).add(event);
       imported++;
     }
 

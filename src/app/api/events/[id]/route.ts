@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { doc, getDoc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 const EVENTS_COLLECTION = "events";
 
@@ -12,8 +12,8 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const snap = await getDoc(doc(db, EVENTS_COLLECTION, id));
-    if (!snap.exists()) {
+    const snap = await adminDb.collection(EVENTS_COLLECTION).doc(id).get();
+    if (!snap.exists) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
     return NextResponse.json({ event: { id: snap.id, ...snap.data() } });
@@ -69,10 +69,9 @@ export async function PATCH(
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
-    updates.updatedAt = Timestamp.now();
+    updates.updatedAt = FieldValue.serverTimestamp();
 
-    const docRef = doc(db, EVENTS_COLLECTION, id);
-    await updateDoc(docRef, updates);
+    await adminDb.collection(EVENTS_COLLECTION).doc(id).update(updates);
 
     return NextResponse.json({ message: "Event updated.", id, updated: Object.keys(updates) });
   } catch (error) {
@@ -89,7 +88,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    await deleteDoc(doc(db, EVENTS_COLLECTION, id));
+    await adminDb.collection(EVENTS_COLLECTION).doc(id).delete();
     return NextResponse.json({ message: "Event deleted.", id });
   } catch (error) {
     console.error("DELETE event error:", error);

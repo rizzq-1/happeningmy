@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  query,
-  where,
-  limit,
-  Timestamp,
-  QueryConstraint,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { SEED_EVENTS } from "@/lib/constants";
 
 const EVENTS_COLLECTION = "events";
@@ -24,30 +15,28 @@ export async function GET(request: NextRequest) {
   const showPending = searchParams.get("status") === "pending";
 
   try {
-    const eventsRef = collection(db, EVENTS_COLLECTION);
-    const constraints: QueryConstraint[] = [];
+    let ref: FirebaseFirestore.Query = adminDb.collection(EVENTS_COLLECTION);
 
     // By default only show published events; ?status=pending for admin review
     if (showPending) {
-      constraints.push(where("status", "==", "pending"));
+      ref = ref.where("status", "==", "pending");
     } else {
-      constraints.push(where("status", "==", "published"));
+      ref = ref.where("status", "==", "published");
     }
 
     if (category) {
-      constraints.push(where("category", "==", category));
+      ref = ref.where("category", "==", category);
     }
     if (city) {
-      constraints.push(where("city", "==", city));
+      ref = ref.where("city", "==", city);
     }
     if (isFree !== null) {
-      constraints.push(where("isFree", "==", isFree === "true"));
+      ref = ref.where("isFree", "==", isFree === "true");
     }
 
-    constraints.push(limit(100));
+    ref = ref.limit(100);
 
-    const fireQuery = query(eventsRef, ...constraints);
-    const snapshot = await getDocs(fireQuery);
+    const snapshot = await ref.get();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let events: any[] = snapshot.docs.map((doc) => ({
@@ -116,11 +105,11 @@ export async function POST(request: NextRequest) {
       attendeeCount: body.attendeeCount || 0,
       status: body.status || "published",
       source: body.source || "manual",
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
-    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), eventData);
+    const docRef = await adminDb.collection(EVENTS_COLLECTION).add(eventData);
 
     return NextResponse.json(
       { event: { id: docRef.id, ...eventData }, message: "Event saved to Firestore" },
