@@ -11,6 +11,15 @@ https://happening-my.vercel.app/
 
 You can use the deployed app directly without running anything locally.
 
+## Live site
+
+Want to access the live site? Just open:
+
+https://happening-my.vercel.app/
+
+You can use the deployed app directly without running anything locally.
+
+
 ## Project Overview
 
 Malaysia has a vibrant events scene — from music festivals in KL to tech meetups in Cyberjaya and cultural celebrations in Penang — but discovering them is fragmented across dozens of platforms, social media pages, and physical posters. There is no single, intelligent hub for Malaysian event discovery.
