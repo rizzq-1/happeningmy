@@ -1,15 +1,11 @@
 import {
   collection,
-  doc,
   getDocs,
   getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
+  doc,
   query,
   where,
   limit,
-  Timestamp,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "./firebase";
@@ -89,43 +85,51 @@ export async function getEventById(id: string): Promise<HappeningEvent | null> {
   }
 }
 
-// ── Create a new event ──────────────────────────────────────
+// ── Create a new event (via API route → Admin SDK) ──────────
 export async function createEvent(event: Omit<HappeningEvent, "id">): Promise<string> {
-  try {
-    // Strip undefined values — Firestore rejects them
-    const clean = Object.fromEntries(
-      Object.entries(event).filter(([, v]) => v !== undefined)
-    );
-    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), {
-      ...clean,
-      createdAt: Timestamp.now(),
-      updatedAt: Timestamp.now(),
-    });
-    return docRef.id;
-  } catch (error) {
-    console.error("Error creating event:", error);
-    throw error;
+  // Strip undefined values
+  const clean = Object.fromEntries(
+    Object.entries(event).filter(([, v]) => v !== undefined)
+  );
+
+  const res = await fetch("/api/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(clean),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to create event" }));
+    throw new Error(err.error || "Failed to create event");
   }
+
+  const data = await res.json();
+  return data.event.id;
 }
 
-// ── Update an event ─────────────────────────────────────────
+// ── Update an event (via API route → Admin SDK) ─────────────
 export async function updateEvent(id: string, data: Partial<HappeningEvent>): Promise<void> {
-  try {
-    const docRef = doc(db, EVENTS_COLLECTION, id);
-    await updateDoc(docRef, { ...data, updatedAt: Timestamp.now() });
-  } catch (error) {
-    console.error("Error updating event:", error);
-    throw error;
+  const res = await fetch(`/api/events/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to update event" }));
+    throw new Error(err.error || "Failed to update event");
   }
 }
 
-// ── Delete an event ─────────────────────────────────────────
+// ── Delete an event (via API route → Admin SDK) ─────────────
 export async function deleteEvent(id: string): Promise<void> {
-  try {
-    await deleteDoc(doc(db, EVENTS_COLLECTION, id));
-  } catch (error) {
-    console.error("Error deleting event:", error);
-    throw error;
+  const res = await fetch(`/api/events/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Failed to delete event" }));
+    throw new Error(err.error || "Failed to delete event");
   }
 }
 
