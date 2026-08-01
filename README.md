@@ -2,23 +2,6 @@
 
 > **Discover, explore, and share events across Malaysia — powered by Google AI, Maps, and Firebase.**
 
----
-## Live site
-
-Want to access the live site? Just open:
-
-https://happening-my.vercel.app/
-
-You can use the deployed app directly without running anything locally.
-
-## Live site
-
-Want to access the live site? Just open:
-
-https://happening-my.vercel.app/
-
-You can use the deployed app directly without running anything locally.
-
 
 ## Project Overview
 
