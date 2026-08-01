@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "database": "happeningdb",
+      "rules": "firestore.rules"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Events are read publicly (homepage, search, event detail pages read
+    // directly from the client SDK). All writes go through API routes using
+    // the Firebase Admin SDK, which bypasses these rules entirely — so
+    // client-side writes are denied here.
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
