@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { collection, getDocs, query, where, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
 import { SEED_EVENTS } from "@/lib/constants";
 import { HappeningEvent } from "@/lib/types";
 
@@ -86,9 +85,11 @@ async function geocodeVenue(venue: string, city: string): Promise<{ lat: number;
 /** Fetch events from Firestore, falling back to seed data. */
 async function getLocalEvents(): Promise<HappeningEvent[]> {
   try {
-    const eventsRef = collection(db, EVENTS_COLLECTION);
-    const q = query(eventsRef, where("status", "==", "published"), limit(100));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection(EVENTS_COLLECTION)
+      .where("status", "==", "published")
+      .limit(100)
+      .get();
     if (snapshot.empty) {
       console.warn("[/api/search] Firestore returned 0 published events, using seed data");
       return SEED_EVENTS;

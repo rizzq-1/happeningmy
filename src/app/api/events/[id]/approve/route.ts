@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { doc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 const EVENTS_COLLECTION = "events";
 
@@ -12,10 +12,9 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    const docRef = doc(db, EVENTS_COLLECTION, id);
-    await updateDoc(docRef, {
+    await adminDb.collection(EVENTS_COLLECTION).doc(id).update({
       status: "published",
-      updatedAt: Timestamp.now(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({ message: "Event approved and published.", id });
@@ -33,7 +32,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    await deleteDoc(doc(db, EVENTS_COLLECTION, id));
+    await adminDb.collection(EVENTS_COLLECTION).doc(id).delete();
     return NextResponse.json({ message: "Event rejected and deleted.", id });
   } catch (error) {
     console.error("Reject error:", error);
